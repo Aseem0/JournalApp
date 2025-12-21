@@ -1,0 +1,83 @@
+﻿@page "/timeline"
+@using JournalApp.Models
+@using JournalApp.Services
+@inject DatabaseService Db
+@inject NavigationManager Nav
+
+<h1>Journals</h1>
+
+<button class="btn btn-success mb-3" @onclick="CreateNew">+ New Entry</button>
+
+@if (Entries == null || Entries.Count == 0)
+{
+    <p>No entries yet.</p>
+}
+else
+{
+    <ul class="entries-list">
+        @foreach (var entry in Entries)
+        {
+            <li class="entry-card">
+                <h4>@entry.EntryDate.ToLongDateString()</h4>
+
+                <p><b>Mood:</b> @entry.PrimaryMood</p>
+
+                @if (entry.TagList?.Any() == true)
+                {
+                    <div class="tags-container">
+                        @foreach (var tag in entry.TagList)
+                        {
+                            <span class="tag">@tag</span>
+                        }
+                    </div>
+                }
+
+            <p>
+                @(
+                            entry.Content.Length > 100
+                            ? entry.Content.Substring(0, 100) + "..."
+                            : entry.Content
+                            )
+            </p>
+
+                <button class="btn btn-primary btn-sm"
+                        @onclick="() => EditEntry(entry.Id)">
+                    Edit
+                </button>
+
+                <button class="btn btn-danger btn-sm ms-2"
+                        @onclick="() => DeleteEntry(entry.Id)">
+                    Delete
+                </button>
+            </li>
+        }
+    </ul>
+   
+}
+
+@code {
+    List<JournalItem>? Entries;
+
+    protected override void OnInitialized()
+    {
+        Entries =  Db.GetEntries();
+    }
+
+    void CreateNew()
+    {
+        Nav.NavigateTo("/entry");
+    }
+
+    void EditEntry(int id)
+    {
+        Nav.NavigateTo($"/entry/{id}");
+    }
+
+    async Task DeleteEntry(int id)
+    {
+        await Db.DeleteEntryAsync(id);
+        Entries?.RemoveAll(e => e.Id == id);
+    }
+
+
+}

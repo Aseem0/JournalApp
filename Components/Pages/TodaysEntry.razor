@@ -1,0 +1,178 @@
+﻿@page "/entry"
+@page "/entry/{Id:int}"
+@using JournalApp.Services
+@using JournalApp.Models
+@inject DatabaseService Db
+@inject NavigationManager Nav
+
+<h1>@(Id.HasValue ? "Edit Entry" : "New Journal Entry")</h1>
+
+@if (EntryLoaded)
+{
+    <div class="entry-form">
+        <label>Date:</label>
+        <input type="date" @bind="Entry.EntryDate" />
+
+        <br /><br />
+
+        <label>Mood:</label>
+        <select @bind="Entry.PrimaryMood">
+            <option value="">Select Mood</option>
+            <option>Happy</option>
+            <option>Sad</option>
+            <option>Calm</option>
+            <option>Stressed</option>
+        </select>
+
+        <br /><br />
+
+        <h3>Tags</h3>
+
+        <!-- Dropdown -->
+        <select @bind="SelectedTag">
+            <option value="">Select Tag</option>
+            @foreach (var tag in AvailableTags)
+            {
+                <option value="@tag">@tag</option>
+            }
+        </select>
+
+        <button class="btn btn-secondary" @onclick="AddSelectedTag">Add</button>
+
+        
+
+        <!-- Custom Tag -->
+        <input type="text" placeholder="Custom tag" @bind="NewCustomTag" />
+        <button class="btn btn-secondary" @onclick="AddCustomTag">Add</button>
+
+        <br /><br />
+
+        <!-- Selected Tags -->
+        @if (Entry.TagList.Any())
+        {
+            <div class="tags-container">
+                @foreach (var tag in Entry.TagList)
+                {
+                    <span class="tag">
+                        @tag
+                        <button @onclick="() => RemoveTag(tag)">×</button>
+                    </span>
+                }
+            </div>
+        }
+
+        <br /><br />
+
+        <label>Content:</label>
+        <textarea @bind="Entry.Content" placeholder="Write your journal..." style="width:100%; height:200px"></textarea>
+
+        <br /><br />
+
+        <button class="btn btn-primary" @onclick="Save">Save</button>
+        
+    </div>
+}
+else
+{
+    <p>Loading entry...</p>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    JournalItem Entry { get; set; } = new JournalItem();
+    bool EntryLoaded { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        if (Id.HasValue)
+        {
+            // Try to get the entry, but ensure we always have a valid object
+            var existing = Db.GetEntryById(Id.Value);
+            Entry = existing ?? new JournalItem
+            {
+                EntryDate = DateTime.Today,
+                CreatedAt = DateTime.Now
+            };
+        }
+        else
+        {
+            Entry = new JournalItem
+            {
+                EntryDate = DateTime.Today,
+                CreatedAt = DateTime.Now
+            };
+        }
+
+        EntryLoaded = true; // now safe to bind
+    }
+
+    void Save()
+    {
+        if (Id.HasValue)
+        {
+            Db.UpdateEntry(Entry);
+        }
+        else
+        {
+            Db.SaveEntry(Entry);
+        }
+
+        Nav.NavigateTo("/timeline", true);
+    }
+
+    List<string> AvailableTags = new()
+{
+    "Education",
+    "Health",
+    "Work",
+    "Travel",
+    "Family",
+    "Finance",
+    "Personal",
+    "Fitness"
+};
+
+    string SelectedTag = "";
+    string NewCustomTag = "";
+
+    void AddSelectedTag()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedTag))
+        {
+            var tags = Entry.TagList;
+
+            if (!tags.Contains(SelectedTag))
+            {
+                tags.Add(SelectedTag);
+                Entry.TagList = tags;
+            }
+
+            SelectedTag = "";
+        }
+    }
+
+    void AddCustomTag()
+    {
+        if (!string.IsNullOrWhiteSpace(NewCustomTag))
+        {
+            var tags = Entry.TagList;
+
+            if (!tags.Contains(NewCustomTag))
+            {
+                tags.Add(NewCustomTag);
+                Entry.TagList = tags;
+            }
+
+            NewCustomTag = "";
+        }
+    }
+
+    void RemoveTag(string tag)
+    {
+        var tags = Entry.TagList;
+        tags.Remove(tag);
+        Entry.TagList = tags;
+    }
+
+}

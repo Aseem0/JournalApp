@@ -1,0 +1,28 @@
+﻿@using JournalApp.Services;
+@using JournalApp.Models;
+@page "/"
+@inject DatabaseService DbService
+@inject IJSRuntime JS
+
+
+
+<div class="container-fluid">
+
+	<h1 class="mt-4">Welcome to JournalApp!</h1>
+
+            <button class="btn btn-outline-secondary w-100 mt-3"
+                    @onclick="ToggleTheme">
+                🌙 Toggle Dark Mode
+            </button>
+
+         </div> 
+
+
+@code {
+    [Inject] JournalApp.Services.ThemeService ThemeService { get; set; }
+
+    async Task ToggleTheme()
+    {
+        await JS.InvokeVoidAsync("theme.toggle");
+    }
+}

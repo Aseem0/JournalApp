@@ -1,37 +1,29 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Journal</a>
-    </div>
-</div>
+﻿@using Microsoft.AspNetCore.Components.Routing
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<MudNavMenu Class="mud-width-full pa-2">
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span aria-hidden="true"></span> Dashboard
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="entry">
-                <span aria-hidden="true"></span> Today's Entry
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="calendar">
-                <span aria-hidden="true"></span> Calendar
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="timeline">
-                <span aria-hidden="true"></span> Timeline
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="analytics">
-                <span  aria-hidden="true"></span> Analytics
-            </NavLink>
-        </div>
-    </nav>
-</div>
+    <MudPaper Elevation="0" Class="pa-3 mb-2">
+        <MudText Typo="Typo.subtitle1" Class="mud-typography-h6">Journal</MudText>
+    </MudPaper>
+
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+        Dashboard
+    </MudNavLink>
+
+    <MudNavLink Href="entry" Icon="@Icons.Material.Filled.Edit">
+        Today's Entry
+    </MudNavLink>
+
+    <MudNavLink Href="calendar" Icon="@Icons.Material.Filled.CalendarToday">
+        Calendar
+    </MudNavLink>
+
+    <MudNavLink Href="timeline" Icon="@Icons.Material.Filled.ListAlt">
+        Timeline
+    </MudNavLink>
+
+    <MudNavLink Href="analytics" Icon="@Icons.Material.Filled.BarChart">
+        Analytics
+    </MudNavLink>
+
+</MudNavMenu>

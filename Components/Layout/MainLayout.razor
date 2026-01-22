@@ -1,20 +1,46 @@
 ﻿@inherits LayoutComponentBase
 @inject JournalApp.Services.ThemeService ThemeService
 
-<div class="page">
-    <div class="sidebar">
+<MudThemeProvider />
+<MudPopoverProvider />
+@* Needed for dialogs *@
+<MudDialogProvider />
+@* Needed for snackbars *@
+<MudSnackbarProvider />
+
+<MudLayout>
+
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+        <MudText Class="ml-2 mud-typography-h6">JournalApp</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Brightness4" Color="Color.Inherit" OnClick="@ToggleTheme" Title="Toggle theme" />
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Variant="DrawerVariant.Temporary" Elevation="1" Anchor="Anchor.Start" Class="mud-width-300">
         <NavMenu />
-    </div>
+    </MudDrawer>
 
-    <main>
-       
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+            <article class="content px-4">
+                @Body
+            </article>
+        </MudContainer>
+    </MudMainContent>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+</MudLayout>
 
 @code {
-   
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task ToggleTheme()
+    {
+        await ThemeService.ToggleTheme();
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using JournalApp.Services;
+using MudBlazor.Services;
 
 namespace JournalApp
 {
@@ -27,6 +28,7 @@ namespace JournalApp
 #endif
             builder.Services.AddSingleton<DatabaseService>();
             builder.Services.AddSingleton<ThemeService>();
+            builder.Services.AddMudServices();
             return builder.Build();
         }
     }

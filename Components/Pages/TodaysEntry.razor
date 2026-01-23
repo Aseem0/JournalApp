@@ -5,76 +5,72 @@
 @inject DatabaseService Db
 @inject NavigationManager Nav
 
-<h1>@(Id.HasValue ? "Edit Entry" : "New Journal Entry")</h1>
+<MudText Typo="Typo.h4" Class="mb-4">@(Id.HasValue ? "Edit Entry" : "New Journal Entry")</MudText>
 
 @if (EntryLoaded)
 {
-    <div class="entry-form">
-        <label>Date:</label>
-        <input type="date" @bind="Entry.EntryDate" />
+    <MudPaper Class="pa-6" Elevation="4">
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker Label="Entry Date" @bind-Date="_entryDate" Editable="true" Color="Color.Primary" />
+            </MudItem>
 
-        <br /><br />
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string" Label="Overall Mood" @bind-Value="Entry.PrimaryMood" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("")">Select Mood</MudSelectItem>
+                    <MudSelectItem Value="@("Happy")">Happy</MudSelectItem>
+                    <MudSelectItem Value="@("Sad")">Sad</MudSelectItem>
+                    <MudSelectItem Value="@("Calm")">Calm</MudSelectItem>
+                    <MudSelectItem Value="@("Stressed")">Stressed</MudSelectItem>
+                </MudSelect>
+            </MudItem>
 
-        <label>Mood:</label>
-        <select @bind="Entry.PrimaryMood">
-            <option value="">Select Mood</option>
-            <option>Happy</option>
-            <option>Sad</option>
-            <option>Calm</option>
-            <option>Stressed</option>
-        </select>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Tags</MudText>
+                <div class="d-flex align-center gap-4 flex-wrap">
+                    <MudSelect T="string" Label="Select Predefined Tag" @bind-Value="SelectedTag" Dense="true" Style="width: 250px;" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("")">Select Tag</MudSelectItem>
+                        @foreach (var tag in AvailableTags)
+                        {
+                            <MudSelectItem Value="@tag">@tag</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="AddSelectedTag">Add</MudButton>
 
-        <br /><br />
+                    <MudDivider Vertical="true" FlexItem="true" />
 
-        <h3>Tags</h3>
+                    <MudTextField T="string" Label="Custom Tag" @bind-Value="NewCustomTag" Dense="true" Style="width: 200px;" Variant="Variant.Outlined" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="AddCustomTag">Add</MudButton>
+                </div>
+            </MudItem>
 
-        <!-- Dropdown -->
-        <select @bind="SelectedTag">
-            <option value="">Select Tag</option>
-            @foreach (var tag in AvailableTags)
-            {
-                <option value="@tag">@tag</option>
-            }
-        </select>
-
-        <button class="btn btn-secondary" @onclick="AddSelectedTag">Add</button>
-
-        
-
-        <!-- Custom Tag -->
-        <input type="text" placeholder="Custom tag" @bind="NewCustomTag" />
-        <button class="btn btn-secondary" @onclick="AddCustomTag">Add</button>
-
-        <br /><br />
-
-        <!-- Selected Tags -->
-        @if (Entry.TagList.Any())
-        {
-            <div class="tags-container">
-                @foreach (var tag in Entry.TagList)
+            <MudItem xs="12">
+                @if (Entry.TagList.Any())
                 {
-                    <span class="tag">
-                        @tag
-                        <button @onclick="() => RemoveTag(tag)">×</button>
-                    </span>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        @foreach (var tag in Entry.TagList)
+                        {
+                            <MudChip T="string" OnClose="() => RemoveTag(tag)" Color="Color.Primary" Variant="Variant.Filled">@tag</MudChip>
+                        }
+                    </div>
                 }
-            </div>
-        }
+            </MudItem>
 
-        <br /><br />
+            <MudItem xs="12">
+                <MudTextField T="string" Label="Your Thoughts" Variant="Variant.Outlined" Lines="8" @bind-Value="Entry.Content" Placeholder="Write your journal entry here..." AutoGrow />
+            </MudItem>
 
-        <label>Content:</label>
-        <textarea @bind="Entry.Content" placeholder="Write your journal..." style="width:100%; height:200px"></textarea>
-
-        <br /><br />
-
-        <button class="btn btn-primary" @onclick="Save">Save</button>
-        
-    </div>
+            <MudItem xs="12" Class="d-flex justify-end mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="Save" Size="Size.Large">Save Entry</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 }
 else
 {
-    <p>Loading entry...</p>
+    <div class="d-flex justify-center align-center" style="height: 300px;">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </div>
 }
 
 @code {
@@ -82,6 +78,13 @@ else
 
     JournalItem Entry { get; set; } = new JournalItem();
     bool EntryLoaded { get; set; } = false;
+
+    // MudDatePicker requires DateTime?
+    private DateTime? _entryDate
+    {
+        get => Entry.EntryDate;
+        set => Entry.EntryDate = value ?? DateTime.Today;
+    }
 
     protected override void OnInitialized()
     {
@@ -122,16 +125,16 @@ else
     }
 
     List<string> AvailableTags = new()
-{
-    "Education",
-    "Health",
-    "Work",
-    "Travel",
-    "Family",
-    "Finance",
-    "Personal",
-    "Fitness"
-};
+    {
+        "Education",
+        "Health",
+        "Work",
+        "Travel",
+        "Family",
+        "Finance",
+        "Personal",
+        "Fitness"
+    };
 
     string SelectedTag = "";
     string NewCustomTag = "";
@@ -174,5 +177,4 @@ else
         tags.Remove(tag);
         Entry.TagList = tags;
     }
-
 }

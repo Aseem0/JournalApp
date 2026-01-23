@@ -1,9 +1,203 @@
 ﻿@page "/calendar"
 
-<h1>Calendar</h1>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
+    <!-- Header with Month/Year and Navigation -->
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-6">
+        <MudText Typo="Typo.h4" Style="font-weight: 600; color: #1a1a1a;">
+            @currentDate.ToString("MMMM yyyy")
+        </MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" 
+                          OnClick="PreviousMonth"
+                          Style="border: 1px solid #e0e0e0; border-radius: 8px;"
+                          Size="Size.Medium" />
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" 
+                          OnClick="NextMonth"
+                          Style="border: 1px solid #e0e0e0; border-radius: 8px;"
+                          Size="Size.Medium" />
+        </MudStack>
+    </MudStack>
 
+    <!-- Calendar Grid -->
+    <MudPaper Elevation="0" Class="pa-4" Style="background-color: white; border-radius: 16px;">
+        <!-- Day Headers -->
+        <MudGrid Spacing="3" Class="mb-2">
+            @foreach (var day in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+            {
+                <MudItem xs="12" sm="12" md="1" Style="min-width: 140px;">
+                    <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666; font-weight: 500;">
+                        @day
+                    </MudText>
+                </MudItem>
+            }
+        </MudGrid>
 
+        <!-- Calendar Days -->
+        <MudGrid Spacing="3">
+            @foreach (var day in GetCalendarDays())
+            {
+                <MudItem xs="12" sm="12" md="1" Style="min-width: 140px;">
+                    <MudPaper Elevation="0" 
+                             Class="pa-4 d-flex flex-column align-center justify-center"
+                             Style="@GetDayStyle(day)"
+                             @onclick="() => SelectDay(day)">
+                        <MudText Typo="Typo.body1" Style="@GetDayTextStyle(day)">
+                            @(day.Day)
+                        </MudText>
+                        @if (day.Mood.HasValue)
+                        {
+                            <div style="@($"width: 8px; height: 8px; border-radius: 50%; background-color: {GetMoodColor(day.Mood.Value)}; margin-top: 8px;")"></div>
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Mood Legend -->
+    <MudPaper Elevation="0" Class="pa-6 mt-6" Style="background-color: white; border-radius: 16px;">
+        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600; color: #1a1a1a;">
+            Mood Legend
+        </MudText>
+        <MudStack Row="true" Spacing="6">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #10b981;"></div>
+                <MudText Typo="Typo.body2" Style="color: #666;">Positive</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #f59e0b;"></div>
+                <MudText Typo="Typo.body2" Style="color: #666;">Neutral</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444;"></div>
+                <MudText Typo="Typo.body2" Style="color: #666;">Negative</MudText>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
 
 @code {
-   
+    private DateTime currentDate = new DateTime(2026, 1, 1);
+    private DateTime? selectedDate;
+    private List<CalendarDay> calendarDays = new();
+
+    public enum MoodType
+    {
+        Positive,
+        Neutral,
+        Negative
+    }
+
+    public class CalendarDay
+    {
+        public DateTime Date { get; set; }
+        public int Day { get; set; }
+        public bool IsCurrentMonth { get; set; }
+        public bool IsSelected { get; set; }
+        public MoodType? Mood { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        LoadCalendarDays();
+        // Sample mood data
+        SetMoodForDay(19, MoodType.Positive);
+        SetMoodForDay(20, MoodType.Positive);
+        SetMoodForDay(22, MoodType.Positive);
+        SetMoodForDay(23, MoodType.Negative);
+        SetMoodForDay(24, MoodType.Neutral);
+    }
+
+    private void LoadCalendarDays()
+    {
+        calendarDays.Clear();
+        var firstDayOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
+        var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+        var startDate = firstDayOfMonth.AddDays(-(int)firstDayOfMonth.DayOfWeek);
+        
+        for (int i = 0; i < 42; i++)
+        {
+            var date = startDate.AddDays(i);
+            calendarDays.Add(new CalendarDay
+            {
+                Date = date,
+                Day = date.Day,
+                IsCurrentMonth = date.Month == currentDate.Month,
+                IsSelected = selectedDate.HasValue && date.Date == selectedDate.Value.Date
+            });
+        }
+    }
+
+    private List<CalendarDay> GetCalendarDays()
+    {
+        return calendarDays;
+    }
+
+    private void SetMoodForDay(int day, MoodType mood)
+    {
+        var calendarDay = calendarDays.FirstOrDefault(d => d.Day == day && d.IsCurrentMonth);
+        if (calendarDay != null)
+        {
+            calendarDay.Mood = mood;
+        }
+    }
+
+    private string GetDayStyle(CalendarDay day)
+    {
+        var baseStyle = "min-height: 120px; border-radius: 12px; cursor: pointer; transition: all 0.2s;";
+        
+        if (day.IsSelected)
+        {
+            return baseStyle + " border: 2px solid #1a1a1a; background-color: #fafafa;";
+        }
+        else if (!day.IsCurrentMonth)
+        {
+            return baseStyle + " border: 1px solid transparent; background-color: transparent;";
+        }
+        else
+        {
+            return baseStyle + " border: 1px solid #e5e7eb; background-color: #fafafa;";
+        }
+    }
+
+    private string GetDayTextStyle(CalendarDay day)
+    {
+        if (!day.IsCurrentMonth)
+        {
+            return "color: #d1d5db; font-weight: 500;";
+        }
+        return "color: #1a1a1a; font-weight: 500;";
+    }
+
+    private string GetMoodColor(MoodType mood)
+    {
+        return mood switch
+        {
+            MoodType.Positive => "#10b981",
+            MoodType.Neutral => "#f59e0b",
+            MoodType.Negative => "#ef4444",
+            _ => "#e5e7eb"
+        };
+    }
+
+    private void SelectDay(CalendarDay day)
+    {
+        selectedDate = day.Date;
+        foreach (var d in calendarDays)
+        {
+            d.IsSelected = d.Date == selectedDate;
+        }
+    }
+
+    private void PreviousMonth()
+    {
+        currentDate = currentDate.AddMonths(-1);
+        LoadCalendarDays();
+    }
+
+    private void NextMonth()
+    {
+        currentDate = currentDate.AddMonths(1);
+        LoadCalendarDays();
+    }
 }

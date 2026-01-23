@@ -1,0 +1,23 @@
+@page "/settings"
+@inject IJSRuntime JS
+
+<MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
+
+<MudPaper Class="pa-4">
+    <MudStack Spacing="4">
+        <MudText Typo="Typo.body1">Manage your application preferences here.</MudText>
+        
+        <MudDivider />
+        
+        <MudSwitch T="bool" Label="Dark Mode" Color="Color.Primary" @bind-Value="_isDarkMode" @onclick="ToggleTheme" />
+    </MudStack>
+</MudPaper>
+
+@code {
+    private bool _isDarkMode = false;
+
+    async Task ToggleTheme()
+    {
+        await JS.InvokeVoidAsync("theme.toggle");
+    }
+}

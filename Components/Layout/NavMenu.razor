@@ -1,29 +1,103 @@
-﻿@using Microsoft.AspNetCore.Components.Routing
+﻿@implements IDisposable
+@inject NavigationManager NavManager
+@using Microsoft.AspNetCore.Components.Routing
 
-<MudNavMenu Class="mud-width-full pa-2">
+<MudPaper Elevation="0" Class="pa-4" Style="height: 100vh; background-color: #fafafa;">
+    <div class="mb-6">
+        <MudText Typo="Typo.h5" Style="font-weight: 600; color: #1a1a1a;">Journal</MudText>
+        <MudText Typo="Typo.body2" Style="color: #666;">Your personal space</MudText>
+    </div>
 
-    <MudPaper Elevation="0" Class="pa-3 mb-2">
-        <MudText Typo="Typo.subtitle1" Class="mud-typography-h6">Journal</MudText>
-    </MudPaper>
+    <MudStack Spacing="2">
+        <MudButton Href="dashboard"
+                   Style="@GetButtonStyle("dashboard")"     
+                   StartIcon="@Icons.Material.Filled.Home"
+                   FullWidth="true"
+                   Variant="@(IsActive("dashboard") ? Variant.Filled : Variant.Text)">
+            Dashboard
+        </MudButton>
 
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
-        Dashboard
-    </MudNavLink>
+        <MudButton Href="entry"
+                   Style="@GetButtonStyle("entry")"
+                   StartIcon="@Icons.Material.Filled.Edit"
+                   FullWidth="true"
+                   Variant="@(IsActive("entry") ? Variant.Filled : Variant.Text)">
+            Today's Entry
+        </MudButton>
 
-    <MudNavLink Href="entry" Icon="@Icons.Material.Filled.Edit">
-        Today's Entry
-    </MudNavLink>
+        <MudButton Href="calendar"
+                   Style="@GetButtonStyle("calendar")"
+                   StartIcon="@Icons.Material.Filled.CalendarToday"
+                   FullWidth="true"
+                   Class="nav-button"
+                               Variant="@(IsActive("calendar") ? Variant.Filled : Variant.Text)">
+            Calendar
+        </MudButton>
 
-    <MudNavLink Href="calendar" Icon="@Icons.Material.Filled.CalendarToday">
-        Calendar
-    </MudNavLink>
+        <MudButton Href="timeline"
+                   Style="@GetButtonStyle("timeline")"
+                   StartIcon="@Icons.Material.Filled.AccessTime"
+                   FullWidth="true"
+                   Variant="@(IsActive("timeline") ? Variant.Filled : Variant.Text)">
+            Timeline
+        </MudButton>
 
-    <MudNavLink Href="timeline" Icon="@Icons.Material.Filled.ListAlt">
-        Timeline
-    </MudNavLink>
+        <MudButton Href="analytics"
+                   Style="@GetButtonStyle("analytics")"
+                   StartIcon="@Icons.Material.Filled.BarChart"
+                   FullWidth="true"
+                   Variant="@(IsActive("analytics") ? Variant.Filled : Variant.Text)">
+            Analytics
+        </MudButton>
 
-    <MudNavLink Href="analytics" Icon="@Icons.Material.Filled.BarChart">
-        Analytics
-    </MudNavLink>
+        <MudButton Href="settings"
+                   Style="@GetButtonStyle("settings")"
+                   StartIcon="@Icons.Material.Filled.Settings"
+                   FullWidth="true"
+                   Variant="@(IsActive("settings") ? Variant.Filled : Variant.Text)">
+            Settings
+        </MudButton>
+    </MudStack>
+</MudPaper>
 
-</MudNavMenu>
+@code {
+    protected override void OnInitialized()
+    {
+        NavManager.LocationChanged += HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= HandleLocationChanged;
+    }
+
+    private bool IsActive(string route)
+    {
+        var currentRoute = NavManager.Uri
+            .Replace(NavManager.BaseUri, "")
+            .Trim('/')
+            .Split('?')[0]
+            .Split('/')[0]
+            .ToLower();
+
+        return currentRoute == route.ToLower();
+    }
+
+    private string GetButtonStyle(string route)
+    {
+        if (IsActive(route))
+        {
+            return "background-color: #0a0a0a !important; color: white !important; border-radius: 12px;" +
+                   " text-transform: none; justify-content: flex-start;" +
+                   " padding: 12px 16px; font-weight: 500;";
+        }
+
+        return "color: #1a1a1a; text-transform: none; justify-content: flex-start;" +
+               " padding: 12px 16px; font-weight: 500;";
+    }
+}

@@ -2,7 +2,9 @@
 @using JournalApp.Services
 @inject DatabaseService Db
 @inject ISnackbar Snackbar
-@inject ThemeService ThemeService
+@inject JournalApp.Services.ThemeService ThemeService
+@inject JournalApp.Services.PdfExportService PdfService
+@inject CommunityToolkit.Maui.Storage.IFileSaver FileSaver
 @implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
@@ -14,7 +16,7 @@
 
     <MudStack Spacing="4">
         <!-- Appearance Section -->
-        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
             <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
                 Appearance
             </MudText>
@@ -29,7 +31,7 @@
                 </MudStack>
 
                 <MudButton Variant="Variant.Outlined"
-                          Style="border-radius: 8px; text-transform: none; border-color: #e0e0e0;"
+                          Style="border-radius: 8px; text-transform: none; border-color: #444;"
                           OnClick="ToggleTheme">
                     @(ThemeService.IsDarkMode ? "Switch to Light" : "Switch to Dark")
                 </MudButton>
@@ -37,7 +39,7 @@
         </MudPaper>
 
         <!-- Security & Privacy Section -->
-        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
             <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
                 Security & Privacy
             </MudText>
@@ -52,7 +54,7 @@
                 </MudStack>
 
                  <MudButton Variant="Variant.Outlined"
-                          Style="border-radius: 8px; text-transform: none; border-color: #e0e0e0;"
+                          Style="border-radius: 8px; text-transform: none; border-color: #444;"
                           OnClick="OpenPinDialog">
                     @(hasPinSet ? "Change PIN" : "Set PIN")
                 </MudButton>
@@ -60,7 +62,7 @@
         </MudPaper>
 
         <!-- Export Data Section -->
-        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
             <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
                 Export Data
             </MudText>
@@ -71,7 +73,7 @@
                     <MudDatePicker @bind-Date="startDate"
                                   Placeholder="mm/dd/yyyy"
                                   Variant="Variant.Outlined"
-                                  Style="background-color: white; border-radius: 8px;" />
+                                  Style="border-radius: 8px;" />
                 </MudItem>
 
                 <MudItem xs="12" md="6">
@@ -79,7 +81,7 @@
                     <MudDatePicker @bind-Date="endDate"
                                   Placeholder="mm/dd/yyyy"
                                   Variant="Variant.Outlined"
-                                  Style="background-color: white; border-radius: 8px;" />
+                                  Style="border-radius: 8px;" />
                 </MudItem>
             </MudGrid>
 
@@ -96,7 +98,7 @@
         </MudPaper>
 
         <!-- Data Management Section -->
-        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
             <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
                 Data Management
             </MudText>
@@ -119,7 +121,7 @@
         </MudPaper>
 
         <!-- About Section -->
-        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
             <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
                 About
             </MudText>
@@ -249,10 +251,35 @@
             return;
         }
 
-        // Export PDF logic here
-        Snackbar.Add($"Exporting entries from {startDate.Value:MM/dd/yyyy} to {endDate.Value:MM/dd/yyyy}", Severity.Info);
-        await Task.Delay(1000);
-        Snackbar.Add("PDF exported successfully", Severity.Success);
+        try
+        {
+            var allEntries = Db.GetEntries();
+            var filteredEntries = allEntries
+                .Where(e => e.EntryDate.Date >= startDate.Value.Date && e.EntryDate.Date <= endDate.Value.Date)
+                .ToList();
+
+            if (!filteredEntries.Any())
+            {
+                Snackbar.Add("No journal entries found in this date range", Severity.Info);
+                return;
+            }
+
+            var pdfBytes = PdfService.GenerateJournalPdf(filteredEntries);
+            using var stream = new MemoryStream(pdfBytes);
+            
+            var fileName = $"MyJournal_{startDate.Value:yyyyMMdd}_{endDate.Value:yyyyMMdd}.pdf";
+            
+            var result = await FileSaver.SaveAsync(fileName, stream, default);
+            
+            if (result.IsSuccessful)
+            {
+                Snackbar.Add($"Journal exported successfully!", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
     }
 
     private void OpenDeleteDialog()

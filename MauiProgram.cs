@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using JournalApp.Services;
 using MudBlazor.Services;
+using CommunityToolkit.Maui;
+using QuestPDF.Infrastructure;
 
 namespace JournalApp
 {
@@ -15,10 +17,14 @@ namespace JournalApp
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 });
+
+            // Initialize QuestPDF License
+            QuestPDF.Settings.License = LicenseType.Community;
 
             builder.Services.AddMauiBlazorWebView();
 
@@ -28,6 +34,8 @@ namespace JournalApp
 #endif
             builder.Services.AddSingleton<DatabaseService>();
             builder.Services.AddSingleton<ThemeService>();
+            builder.Services.AddSingleton<PdfExportService>();
+            builder.Services.AddSingleton(CommunityToolkit.Maui.Storage.FileSaver.Default);
             builder.Services.AddMudServices();
             return builder.Build();
         }

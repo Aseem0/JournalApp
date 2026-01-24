@@ -1,23 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>JournalApp</title>
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="JournalApp.styles.css" />
-    <link rel="icon" href="data:,">
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="icon" href="data:," />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    />
 
     <!-- MudBlazor CSS (required) -->
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-</head>
+    <link
+      href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
+      rel="stylesheet"
+    />
+  </head>
 
-<body>
-
+  <body>
     <div class="status-bar-safe-area"></div>
 
     <div id="app">Loading...</div>
@@ -26,14 +34,54 @@
 
     <!-- MudBlazor JS (required) -->
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 
     <script>
-        window.theme = {
-            toggle: function () {
-                document.body.classList.toggle("dark");
-            }
-        };
-    </script>
-</body>
+      window.theme = {
+        toggle: function () {
+          document.body.classList.toggle("dark");
+        },
+        set: function (isDark) {
+          if (isDark) {
+            document.body.classList.add("dark");
+          } else {
+            document.body.classList.remove("dark");
+          }
+        },
+      };
 
+      window.quillHelpers = {
+        initQuill: function (elementId, content, dotNetRef) {
+          var quill = new Quill("#" + elementId, {
+            theme: "snow",
+            placeholder: "Write your journal entry here...",
+            modules: {
+              toolbar: [
+                ["bold", "italic", "underline"],
+                [{ header: 1 }, { header: 2 }],
+                [{ list: "ordered" }, { list: "bullet" }],
+                ["link"],
+              ],
+            },
+          });
+
+          if (content) {
+            quill.root.innerHTML = content;
+          }
+
+          quill.on("text-change", function () {
+            var html = quill.root.innerHTML;
+            dotNetRef.invokeMethodAsync("UpdateEntryContent", html);
+          });
+
+          window.quillInstance = quill;
+        },
+        getQuillContent: function () {
+          return window.quillInstance
+            ? window.quillInstance.root.innerHTML
+            : "";
+        },
+      };
+    </script>
+  </body>
 </html>

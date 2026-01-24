@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
+@inject JournalApp.Services.ThemeService ThemeService
+@implements IDisposable
 
-<MudThemeProvider />
+<MudThemeProvider Theme="_theme" IsDarkMode="@ThemeService.IsDarkMode" />
 <MudPopoverProvider />
 @* Needed for dialogs *@
 <MudDialogProvider />
@@ -18,4 +20,31 @@
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
+@code {
+    private MudTheme _theme = new MudTheme()
+    {
+        PaletteDark = new PaletteDark()
+        {
+            Black = "#000000",
+            Background = "#000000",
+            Surface = "#000000",
+            DrawerBackground = "#000000",
+            AppbarBackground = "#000000",
+            TextPrimary = "#ffffff",
+            TextSecondary = "#b2b2b2",
+            ActionDefault = "#ffffff"
+        }
+    };
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+}
 

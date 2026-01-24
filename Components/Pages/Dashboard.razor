@@ -1,28 +1,290 @@
 @page "/"
-@page "/dashboard"
-@using JournalApp.Services;
-@inject DatabaseService DbService
-@inject IJSRuntime JS
+@using JournalApp.Services
+@using JournalApp.Models
+@inject DatabaseService Db
+@inject NavigationManager Nav
 
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <MudText Typo="Typo.h4" Style="font-weight: 600;">Welcome back</MudText>
+        <MudText Typo="Typo.body1">Here's your journaling overview</MudText>
+    </div>
 
+    <!-- Stats Cards Row -->
+    <MudGrid Spacing="4" Class="mb-6">
+        <!-- Current Streak -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background-color: #fff4ed; display: flex; align-items: center; justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Style="color: #fb923c;" Size="Size.Medium" />
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.body2" Style="margin-bottom: 4px;">Current Streak</MudText>
+                        <MudText Typo="Typo.h5" Style="font-weight: 600;">@currentStreak days</MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
 
-<div class="container-fluid">
+        <!-- Longest Streak -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background-color: #eff6ff; display: flex; align-items: center; justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Filled.TrackChanges" Style="color: #3b82f6;" Size="Size.Medium" />
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.body2" Style="margin-bottom: 4px;">Longest Streak</MudText>
+                        <MudText Typo="Typo.h5" Style="font-weight: 600;">@longestStreak days</MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
 
-	<h1 class="mt-4">Welcome to JournalApp!</h1>
+        <!-- Missed Days -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background-color: #faf5ff; display: flex; align-items: center; justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Style="color: #a855f7;" Size="Size.Medium" />
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.body2" Style="margin-bottom: 4px;">Missed Days</MudText>
+                        <MudText Typo="Typo.h5" Style="font-weight: 600;">@missedDays</MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 
-            <button class="btn btn-outline-secondary w-100 mt-3"
-                    @onclick="ToggleTheme">
-                🌙 Toggle Dark Mode
-            </button>
+    <!-- This Week's Mood -->
+    <MudPaper Elevation="0" Class="pa-6 mb-6" Style="border-radius: 16px; border: 1px solid #444;">
+        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+            This Week's Mood
+        </MudText>
 
-         </div> 
+        <MudGrid Spacing="4">
+            <!-- Positive -->
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; border: 1px solid #333;">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #10b981;"></div>
+                        <div>
+                            <MudText Typo="Typo.body2">Positive</MudText>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">@positiveMoodCount</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
 
+            <!-- Neutral -->
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; border: 1px solid #333;">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #f59e0b;"></div>
+                        <div>
+                            <MudText Typo="Typo.body2">Neutral</MudText>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">@neutralMoodCount</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Negative -->
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; border: 1px solid #333;">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444;"></div>
+                        <div>
+                            <MudText Typo="Typo.body2">Negative</MudText>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">@negativeMoodCount</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Recent Entries -->
+    <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                Recent Entries
+            </MudText>
+            <MudButton Variant="Variant.Text"
+                      Style="text-transform: none;"
+                      OnClick="WriteNewEntry">
+                Write today's entry
+            </MudButton>
+        </MudStack>
+
+        <MudStack Spacing="3">
+            @if (recentEntries.Any())
+            {
+                @foreach (var entry in recentEntries)
+                {
+                    <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; border: 1px solid #333; cursor: pointer;" @onclick="() => ViewEntry(entry.Id)">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                <MudText Typo="Typo.body2">
+                                    @entry.EntryDate.ToString("dddd, MMMM dd, yyyy")
+                                </MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body1" Style="line-height: 1.6;">
+                                @{
+                                    var plainText = GetPlainText(entry.Content);
+                                    @(plainText.Length > 150 ? plainText.Substring(0, 150) + "..." : plainText)
+                                }
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                }
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Style="text-align: center; padding: 32px 0;">
+                    No entries yet. Start writing your first journal entry!
+                </MudText>
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
 
 @code {
-    [Inject] JournalApp.Services.ThemeService ThemeService { get; set; }
+    private int currentStreak = 0;
+    private int longestStreak = 0;
+    private int missedDays = 0;
+    private int positiveMoodCount = 0;
+    private int neutralMoodCount = 0;
+    private int negativeMoodCount = 0;
+    private List<JournalItem> recentEntries = new();
 
-    async Task ToggleTheme()
+    private List<string> positiveMoods = new() { "Happy", "Excited", "Grateful", "Peaceful", "Proud", "Hopeful", "Calm" };
+    private List<string> neutralMoods = new() { "Thoughtful", "Curious", "Neutral", "Content" };
+    private List<string> negativeMoods = new() { "Sad", "Anxious", "Angry", "Frustrated", "Tired", "Lonely", "Stressed" };
+
+    protected override void OnInitialized()
     {
-        await JS.InvokeVoidAsync("theme.toggle");
+        LoadDashboardData();
+    }
+
+    private void LoadDashboardData()
+    {
+        var allEntries = Db.GetEntries();
+        
+        // Get recent entries (last 3)
+        recentEntries = allEntries.OrderByDescending(e => e.EntryDate).Take(3).ToList();
+
+        // Calculate current streak
+        currentStreak = CalculateCurrentStreak(allEntries);
+
+        // Calculate longest streak
+        longestStreak = CalculateLongestStreak(allEntries);
+
+        // Calculate missed days (example: days in last 30 days without entries)
+        missedDays = CalculateMissedDays(allEntries);
+
+        // Calculate this week's mood distribution
+        CalculateWeeklyMoodDistribution(allEntries);
+    }
+
+    private int CalculateCurrentStreak(List<JournalItem> entries)
+    {
+        if (!entries.Any()) return 0;
+
+        var sortedEntries = entries.OrderByDescending(e => e.EntryDate).ToList();
+        var today = DateTime.Today;
+        var streak = 0;
+        var currentDate = today;
+
+        // Check if there's an entry for today or yesterday
+        var latestEntry = sortedEntries.First().EntryDate.Date;
+        if (latestEntry != today && latestEntry != today.AddDays(-1))
+            return 0;
+
+        foreach (var entry in sortedEntries)
+        {
+            if (entry.EntryDate.Date == currentDate || entry.EntryDate.Date == currentDate.AddDays(-1))
+            {
+                streak++;
+                currentDate = entry.EntryDate.Date.AddDays(-1);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return streak;
+    }
+
+    private int CalculateLongestStreak(List<JournalItem> entries)
+    {
+        if (!entries.Any()) return 0;
+
+        var sortedEntries = entries.OrderBy(e => e.EntryDate).Select(e => e.EntryDate.Date).Distinct().ToList();
+        int maxStreak = 1;
+        int currentStreakCalc = 1;
+
+        for (int i = 1; i < sortedEntries.Count; i++)
+        {
+            if ((sortedEntries[i] - sortedEntries[i - 1]).TotalDays == 1)
+            {
+                currentStreakCalc++;
+                maxStreak = Math.Max(maxStreak, currentStreakCalc);
+            }
+            else
+            {
+                currentStreakCalc = 1;
+            }
+        }
+
+        return maxStreak;
+    }
+
+    private int CalculateMissedDays(List<JournalItem> entries)
+    {
+        if (!entries.Any()) return 0;
+
+        var entryDates = entries.Select(e => e.EntryDate.Date).Distinct().ToHashSet();
+        var firstEntryDate = entryDates.Min();
+        var yesterday = DateTime.Today.AddDays(-1);
+
+        if (firstEntryDate > yesterday) return 0;
+
+        var totalDays = (yesterday - firstEntryDate).Days + 1;
+        var entriesInPeriod = entryDates.Count(d => d >= firstEntryDate && d <= yesterday);
+
+        return totalDays - entriesInPeriod;
+    }
+
+    private void CalculateWeeklyMoodDistribution(List<JournalItem> entries)
+    {
+        var weekStart = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek);
+        var thisWeekEntries = entries.Where(e => e.EntryDate >= weekStart).ToList();
+
+        positiveMoodCount = thisWeekEntries.Count(e => positiveMoods.Contains(e.PrimaryMood));
+        neutralMoodCount = thisWeekEntries.Count(e => neutralMoods.Contains(e.PrimaryMood));
+        negativeMoodCount = thisWeekEntries.Count(e => negativeMoods.Contains(e.PrimaryMood));
+    }
+
+    private void WriteNewEntry()
+    {
+        Nav.NavigateTo("/entry");
+    }
+
+    private void ViewEntry(int id)
+    {
+        Nav.NavigateTo($"/entry/{id}");
+    }
+
+    private string GetPlainText(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return string.Empty;
+        var plainText = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", string.Empty);
+        return System.Net.WebUtility.HtmlDecode(plainText);
     }
 }

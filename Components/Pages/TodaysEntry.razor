@@ -4,67 +4,89 @@
 @using JournalApp.Models
 @inject DatabaseService Db
 @inject NavigationManager Nav
-
-<MudText Typo="Typo.h4" Class="mb-4">@(Id.HasValue ? "Edit Entry" : "New Journal Entry")</MudText>
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 @if (EntryLoaded)
 {
-    <MudPaper Class="pa-6" Elevation="4">
-        <MudGrid>
-            <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Entry Date" @bind-Date="_entryDate" Editable="true" Color="Color.Primary" />
-            </MudItem>
+    <MudContainer MaxWidth="MaxWidth.Large" Class="pa-6">
+        <!-- Header Section -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <div>
+                <MudText Typo="Typo.h4" Style="font-weight: 600;">
+                    @Entry.EntryDate.ToString("dddd, MMMM dd, yyyy")
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    @wordCount words
+                </MudText>
+            </div>
 
-            <MudItem xs="12" sm="6">
-                <MudSelect T="string" Label="Overall Mood" @bind-Value="Entry.PrimaryMood" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("")">Select Mood</MudSelectItem>
-                    <MudSelectItem Value="@("Happy")">Happy</MudSelectItem>
-                    <MudSelectItem Value="@("Sad")">Sad</MudSelectItem>
-                    <MudSelectItem Value="@("Calm")">Calm</MudSelectItem>
-                    <MudSelectItem Value="@("Stressed")">Stressed</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-
-            <MudItem xs="12">
-                <MudText Typo="Typo.subtitle1" Class="mb-2">Tags</MudText>
-                <div class="d-flex align-center gap-4 flex-wrap">
-                    <MudSelect T="string" Label="Select Predefined Tag" @bind-Value="SelectedTag" Dense="true" Style="width: 250px;" Variant="Variant.Outlined">
-                        <MudSelectItem Value="@("")">Select Tag</MudSelectItem>
-                        @foreach (var tag in AvailableTags)
-                        {
-                            <MudSelectItem Value="@tag">@tag</MudSelectItem>
-                        }
-                    </MudSelect>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="AddSelectedTag">Add</MudButton>
-
-                    <MudDivider Vertical="true" FlexItem="true" />
-
-                    <MudTextField T="string" Label="Custom Tag" @bind-Value="NewCustomTag" Dense="true" Style="width: 200px;" Variant="Variant.Outlined" />
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="AddCustomTag">Add</MudButton>
-                </div>
-            </MudItem>
-
-            <MudItem xs="12">
-                @if (Entry.TagList.Any())
+            <MudStack Row="true" Spacing="2">
+                @if (Id.HasValue)
                 {
-                    <div class="d-flex flex-wrap gap-2 mt-2">
-                        @foreach (var tag in Entry.TagList)
-                        {
-                            <MudChip T="string" OnClose="() => RemoveTag(tag)" Color="Color.Primary" Variant="Variant.Filled">@tag</MudChip>
-                        }
-                    </div>
+                    <MudButton Variant="Variant.Outlined"
+                              StartIcon="@Icons.Material.Filled.Delete"
+                              Color="Color.Error"
+                              Style="border-radius: 8px; text-transform: none;"
+                              OnClick="DeleteEntry">
+                        Delete
+                    </MudButton>
                 }
-            </MudItem>
+                <MudButton Variant="Variant.Filled"
+                          StartIcon="@Icons.Material.Filled.Save"
+                          Style="background-color: #fff; color: black; text-transform: none; border-radius: 8px;"
+                          OnClick="Save">
+                    Save
+                </MudButton>
+            </MudStack>
+        </MudStack>
 
-            <MudItem xs="12">
-                <MudTextField T="string" Label="Your Thoughts" Variant="Variant.Outlined" Lines="8" @bind-Value="Entry.Content" Placeholder="Write your journal entry here..." AutoGrow />
-            </MudItem>
+        <!-- Mood and Tags Row -->
+        <MudStack Row="true" Spacing="2" Class="mb-4" Style="flex-wrap: wrap;">
+            <!-- Mood Button -->
+            <MudButton Variant="Variant.Outlined"
+                      StartIcon="@Icons.Material.Filled.EmojiEmotions"
+                      Style="@GetMoodButtonStyle()"
+                      OnClick="OpenMoodDialog">
+                Mood: @Entry.PrimaryMood
+            </MudButton>
 
-            <MudItem xs="12" Class="d-flex justify-end mt-4">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="Save" Size="Size.Large">Save Entry</MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+            <!-- Tags Button -->
+            <MudButton Variant="Variant.Outlined"
+                      StartIcon="@Icons.Material.Filled.LocalOffer"
+                      Style="border-radius: 20px; text-transform: none; border-color: #444;"
+                      OnClick="OpenTagDialog">
+                @Entry.TagList.Count tag@(Entry.TagList.Count != 1 ? "s" : "")
+            </MudButton>
+
+            <!-- Display Tags -->
+            @foreach (var tag in Entry.TagList)
+            {
+                <MudChip T="string" Text="@tag"
+                        Size="Size.Medium"
+                        Style="border: 1px solid #444; border-radius: 16px;" />
+            }
+        </MudStack>
+
+        <!-- Secondary Moods -->
+        @if (secondaryMoods.Any())
+        {
+            <MudStack Row="true" Spacing="2" Class="mb-4" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.body2">Secondary moods:</MudText>
+                @foreach (var mood in secondaryMoods)
+                {
+                    <MudChip T="string" Text="@mood"
+                            Size="Size.Small"
+                            Style="border: 1px solid #444; border-radius: 16px;" />
+                }
+            </MudStack>
+        }
+
+        <!-- Journal Content -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444; min-height: 400px;">
+            <div id="quill-editor" style="height: 350px;"></div>
+        </MudPaper>
+    </MudContainer>
 }
 else
 {
@@ -73,29 +95,180 @@ else
     </div>
 }
 
+<!-- Mood Selection Dialog -->
+<MudDialog @bind-Visible="showMoodDialog" Options="moodDialogOptions">
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">Select Mood</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseMoodDialog" />
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <!-- Primary Mood -->
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Primary Mood</MudText>
+                
+                <MudText Typo="Typo.body2" Class="mb-2" Style="color: #999; font-size: 12px;">Positive</MudText>
+                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;" Class="mb-3">
+                    @foreach (var mood in positiveMoods)
+                    {
+                        <MudChip T="string" Text="@mood"
+                                OnClick="() => SelectPrimaryMood(mood)"
+                                Style="@GetMoodChipStyle(mood, Entry.PrimaryMood)"
+                                Size="Size.Medium" />
+                    }
+                </MudStack>
+
+                <MudText Typo="Typo.body2" Class="mb-2" Style="color: #999; font-size: 12px;">Neutral</MudText>
+                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;" Class="mb-3">
+                    @foreach (var mood in neutralMoods)
+                    {
+                        <MudChip T="string" Text="@mood"
+                                OnClick="() => SelectPrimaryMood(mood)"
+                                Style="@GetMoodChipStyle(mood, Entry.PrimaryMood)"
+                                Size="Size.Medium" />
+                    }
+                </MudStack>
+
+                <MudText Typo="Typo.body2" Class="mb-2" Style="color: #999; font-size: 12px;">Negative</MudText>
+                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                    @foreach (var mood in negativeMoods)
+                    {
+                        <MudChip T="string" Text="@mood"
+                                OnClick="() => SelectPrimaryMood(mood)"
+                                Style="@GetMoodChipStyle(mood, Entry.PrimaryMood)"
+                                Size="Size.Medium" />
+                    }
+                </MudStack>
+            </div>
+
+            <!-- Secondary Moods -->
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Secondary Moods (up to 2)</MudText>
+               <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                    @foreach (var mood in allMoods.Where(m => m != Entry.PrimaryMood))
+                    {
+                        <MudChip T="string" Text="@mood"
+                                OnClick="() => ToggleSecondaryMood(mood)"
+                                Style="@GetSecondaryMoodChipStyle(mood)"
+                                Size="Size.Medium" />
+                    }
+                </MudStack>
+            </div>
+        </MudStack>
+    </DialogContent>
+</MudDialog>
+
+<!-- Tag Management Dialog -->
+<MudDialog @bind-Visible="showTagDialog" Options="tagDialogOptions">
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">Manage Tags</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseTagDialog" />
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <!-- Predefined Tags -->
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Predefined Tags</MudText>
+               <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                    @foreach (var tag in predefinedTags)
+                    {
+                        <MudChip T="string" Text="@tag"
+                                OnClick="() => ToggleTag(tag)"
+                                Style="@GetTagChipStyle(tag)"
+                                Size="Size.Medium" />
+                    }
+                </MudStack>
+            </div>
+
+            <!-- Add Custom Tag -->
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="mb-2" Style="color: #666;">Add Custom Tag</MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudTextField T="string"
+                                 @bind-Value="customTagInput"
+                                 Placeholder="Enter tag name"
+                                 Variant="Variant.Outlined"
+                                 Style="flex: 1;" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                  Variant="Variant.Filled"
+                                  Style="background-color: #fff; color: black; border-radius: 8px;"
+                                  OnClick="AddCustomTag" />
+                </MudStack>
+            </div>
+
+            <!-- Selected Tags -->
+            @if (Entry.TagList.Any())
+            {
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Selected Tags</MudText>
+                    <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                        @foreach (var tag in Entry.TagList)
+                        {
+                            <MudChip T="string" Text="@tag"
+                                    OnClose="() => RemoveTag(tag)"
+                                    Size="Size.Medium"
+                                    Style="border: 1px solid #444; border-radius: 16px;" />
+                        }
+                    </MudStack>
+                </div>
+            }
+        </MudStack>
+    </DialogContent>
+</MudDialog>
+
 @code {
     [Parameter] public int? Id { get; set; }
 
     JournalItem Entry { get; set; } = new JournalItem();
     bool EntryLoaded { get; set; } = false;
+    int wordCount = 0;
 
-    // MudDatePicker requires DateTime?
-    private DateTime? _entryDate
+    // Mood Dialog
+    bool showMoodDialog = false;
+    List<string> secondaryMoods = new();
+
+    List<string> positiveMoods = new() { "Happy", "Excited", "Grateful", "Peaceful", "Proud", "Hopeful" };
+    List<string> neutralMoods = new() { "Calm", "Thoughtful", "Curious", "Neutral", "Content" };
+    List<string> negativeMoods = new() { "Sad", "Anxious", "Angry", "Frustrated", "Tired", "Lonely" };
+    List<string> allMoods = new();
+
+    // Tag Dialog
+    bool showTagDialog = false;
+    string customTagInput = "";
+    List<string> predefinedTags = new() { "Work", "Health", "Travel", "Fitness", "Personal", "Goals", "Family", "Relationships" };
+
+    private DialogOptions moodDialogOptions = new()
     {
-        get => Entry.EntryDate;
-        set => Entry.EntryDate = value ?? DateTime.Today;
-    }
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = false
+    };
+
+    private DialogOptions tagDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = false
+    };
 
     protected override void OnInitialized()
     {
+        allMoods.AddRange(positiveMoods);
+        allMoods.AddRange(neutralMoods);
+        allMoods.AddRange(negativeMoods);
+
         if (Id.HasValue)
         {
-            // Try to get the entry, but ensure we always have a valid object
             var existing = Db.GetEntryById(Id.Value);
             Entry = existing ?? new JournalItem
             {
                 EntryDate = DateTime.Today,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                PrimaryMood = "Calm"
             };
         }
         else
@@ -103,71 +276,151 @@ else
             Entry = new JournalItem
             {
                 EntryDate = DateTime.Today,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                PrimaryMood = "Calm"
             };
         }
 
-        EntryLoaded = true; // now safe to bind
+        UpdateWordCount();
+        EntryLoaded = true;
+    }
+
+    void UpdateWordCount()
+    {
+        if (!string.IsNullOrWhiteSpace(Entry.Content))
+        {
+            var text = System.Text.RegularExpressions.Regex.Replace(Entry.Content, "<.*?>", String.Empty);
+            wordCount = text.Split(new[] { ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        }
+        else
+        {
+            wordCount = 0;
+        }
     }
 
     void Save()
     {
+        if (string.IsNullOrWhiteSpace(Entry.Content))
+        {
+            Snackbar.Add("Please write something in your journal", Severity.Warning);
+            return;
+        }
+
         if (Id.HasValue)
         {
             Db.UpdateEntry(Entry);
+            Snackbar.Add("Entry updated successfully", Severity.Success);
         }
         else
         {
             Db.SaveEntry(Entry);
+            Snackbar.Add("Entry saved successfully", Severity.Success);
         }
 
-        Nav.NavigateTo("/timeline", true);
+        Nav.NavigateTo("/timeline");
     }
 
-    List<string> AvailableTags = new()
+    void DeleteEntry()
     {
-        "Education",
-        "Health",
-        "Work",
-        "Travel",
-        "Family",
-        "Finance",
-        "Personal",
-        "Fitness"
-    };
-
-    string SelectedTag = "";
-    string NewCustomTag = "";
-
-    void AddSelectedTag()
-    {
-        if (!string.IsNullOrWhiteSpace(SelectedTag))
+        if (Id.HasValue)
         {
-            var tags = Entry.TagList;
-
-            if (!tags.Contains(SelectedTag))
-            {
-                tags.Add(SelectedTag);
-                Entry.TagList = tags;
-            }
-
-            SelectedTag = "";
+            Db.DeleteEntryAsync(Id.Value);
+            Snackbar.Add("Entry deleted successfully", Severity.Success);
+            Nav.NavigateTo("/timeline");
         }
+    }
+
+    // Mood Dialog Methods
+    void OpenMoodDialog()
+    {
+        showMoodDialog = true;
+    }
+
+    void CloseMoodDialog()
+    {
+        showMoodDialog = false;
+    }
+
+    void SelectPrimaryMood(string mood)
+    {
+        Entry.PrimaryMood = mood;
+        StateHasChanged();
+    }
+
+    void ToggleSecondaryMood(string mood)
+    {
+        if (secondaryMoods.Contains(mood))
+        {
+            secondaryMoods.Remove(mood);
+        }
+        else if (secondaryMoods.Count < 2)
+        {
+            secondaryMoods.Add(mood);
+        }
+        StateHasChanged();
+    }
+
+    string GetMoodButtonStyle()
+    {
+        return "border-radius: 20px; text-transform: none; border-color: #444;";
+    }
+
+    string GetMoodChipStyle(string mood, string selectedMood)
+    {
+        if (mood == selectedMood)
+        {
+            return "background-color: #fff; color: black; cursor: pointer; border-radius: 16px;";
+        }
+        return "border: 1px solid #444; cursor: pointer; border-radius: 16px;";
+    }
+
+    string GetSecondaryMoodChipStyle(string mood)
+    {
+        if (secondaryMoods.Contains(mood))
+        {
+            return "background-color: #fff; color: black; cursor: pointer; border-radius: 16px;";
+        }
+        return "border: 1px solid #444; cursor: pointer; border-radius: 16px;";
+    }
+
+    // Tag Dialog Methods
+    void OpenTagDialog()
+    {
+        showTagDialog = true;
+    }
+
+    void CloseTagDialog()
+    {
+        showTagDialog = false;
+    }
+
+    void ToggleTag(string tag)
+    {
+        var tags = Entry.TagList;
+        if (tags.Contains(tag))
+        {
+            tags.Remove(tag);
+        }
+        else
+        {
+            tags.Add(tag);
+        }
+        Entry.TagList = tags; // Trigger setter
+        StateHasChanged();
     }
 
     void AddCustomTag()
     {
-        if (!string.IsNullOrWhiteSpace(NewCustomTag))
+        if (!string.IsNullOrWhiteSpace(customTagInput))
         {
             var tags = Entry.TagList;
-
-            if (!tags.Contains(NewCustomTag))
+            if (!tags.Contains(customTagInput))
             {
-                tags.Add(NewCustomTag);
-                Entry.TagList = tags;
+                tags.Add(customTagInput);
+                Entry.TagList = tags; // Trigger setter
+                customTagInput = "";
+                StateHasChanged();
             }
-
-            NewCustomTag = "";
         }
     }
 
@@ -175,6 +428,40 @@ else
     {
         var tags = Entry.TagList;
         tags.Remove(tag);
-        Entry.TagList = tags;
+        Entry.TagList = tags; // Trigger setter
+        StateHasChanged();
+    }
+
+    string GetTagChipStyle(string tag)
+    {
+        if (Entry.TagList.Contains(tag))
+        {
+            return "background-color: #fff; color: black; cursor: pointer; border-radius: 16px;";
+        }
+        return "border: 1px solid #444; cursor: pointer; border-radius: 16px;";
+    }
+
+    private DotNetObjectReference<TodaysEntry>? _objRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("quillHelpers.initQuill", "quill-editor", Entry.Content, _objRef);
+        }
+    }
+
+    [JSInvokable]
+    public void UpdateEntryContent(string htmlContent)
+    {
+        Entry.Content = htmlContent;
+        UpdateWordCount();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _objRef?.Dispose();
     }
 }

@@ -5,6 +5,8 @@ namespace JournalApp.Services
     public class ThemeService
     {
         private readonly IJSRuntime _js;
+        public bool IsDarkMode { get; private set; }
+        public event Action? OnThemeChanged;
 
         public ThemeService(IJSRuntime js)
         {
@@ -13,7 +15,16 @@ namespace JournalApp.Services
 
         public async Task ToggleTheme()
         {
-            await _js.InvokeVoidAsync("theme.toggle");
+            IsDarkMode = !IsDarkMode;
+            OnThemeChanged?.Invoke();
+            try
+            {
+                await _js.InvokeVoidAsync("theme.set", IsDarkMode);
+            }
+            catch (Exception)
+            {
+                // Ignore JS errors during theme toggle
+            }
         }
     }
 }

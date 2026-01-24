@@ -2,18 +2,18 @@
 @inject NavigationManager NavManager
 @using Microsoft.AspNetCore.Components.Routing
 
-<MudPaper Elevation="0" Class="pa-4" Style="height: 100vh; background-color: #fafafa;">
+<MudPaper Elevation="0" Class="pa-4" Style="height: 100vh;">
     <div class="mb-6">
-        <MudText Typo="Typo.h5" Style="font-weight: 600; color: #1a1a1a;">Journal</MudText>
-        <MudText Typo="Typo.body2" Style="color: #666;">Your personal space</MudText>
+        <MudText Typo="Typo.h5" Style="font-weight: 600;">Journal</MudText>
+        <MudText Typo="Typo.body2">Your personal space</MudText>
     </div>
 
     <MudStack Spacing="2">
-        <MudButton Href="dashboard"
-                   Style="@GetButtonStyle("dashboard")"     
+        <MudButton Href="/"
+                   Style="@GetButtonStyle("/")"     
                    StartIcon="@Icons.Material.Filled.Home"
                    FullWidth="true"
-                   Variant="@(IsActive("dashboard") ? Variant.Filled : Variant.Text)">
+                   Variant="@(IsActive("/") ? Variant.Filled : Variant.Text)">
             Dashboard
         </MudButton>
 
@@ -30,7 +30,7 @@
                    StartIcon="@Icons.Material.Filled.CalendarToday"
                    FullWidth="true"
                    Class="nav-button"
-                               Variant="@(IsActive("calendar") ? Variant.Filled : Variant.Text)">
+                   Variant="@(IsActive("calendar") ? Variant.Filled : Variant.Text)">
             Calendar
         </MudButton>
 
@@ -85,6 +85,9 @@
             .Split('/')[0]
             .ToLower();
 
+        if (route == "/" && string.IsNullOrEmpty(currentRoute))
+            return true;
+
         return currentRoute == route.ToLower();
     }
 
@@ -97,7 +100,6 @@
                    " padding: 12px 16px; font-weight: 500;";
         }
 
-        return "color: #1a1a1a; text-transform: none; justify-content: flex-start;" +
-               " padding: 12px 16px; font-weight: 500;";
+        return "text-transform: none; justify-content: flex-start; padding: 12px 16px; font-weight: 500;";
     }
 }

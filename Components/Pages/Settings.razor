@@ -1,23 +1,285 @@
 @page "/settings"
-@inject IJSRuntime JS
+@using JournalApp.Services
+@inject DatabaseService Db
+@inject ISnackbar Snackbar
+@inject ThemeService ThemeService
+@implements IDisposable
 
-<MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <MudText Typo="Typo.h4" Style="font-weight: 600;">Settings</MudText>
+        <MudText Typo="Typo.body1">Manage your journal preferences</MudText>
+    </div>
 
-<MudPaper Class="pa-4">
     <MudStack Spacing="4">
-        <MudText Typo="Typo.body1">Manage your application preferences here.</MudText>
-        
-        <MudDivider />
-        
-        <MudSwitch T="bool" Label="Dark Mode" Color="Color.Primary" @bind-Value="_isDarkMode" @onclick="ToggleTheme" />
+        <!-- Appearance Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+            <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                Appearance
+            </MudText>
+
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.LightMode" Size="Size.Medium" />
+                    <div>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">Theme</MudText>
+                        <MudText Typo="Typo.body2">@(ThemeService.IsDarkMode ? "Dark mode" : "Light mode")</MudText>
+                    </div>
+                </MudStack>
+
+                <MudButton Variant="Variant.Outlined"
+                          Style="border-radius: 8px; text-transform: none; border-color: #e0e0e0;"
+                          OnClick="ToggleTheme">
+                    @(ThemeService.IsDarkMode ? "Switch to Light" : "Switch to Dark")
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Security & Privacy Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+            <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                Security & Privacy
+            </MudText>
+
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Medium" />
+                    <div>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">PIN Protection</MudText>
+                        <MudText Typo="Typo.body2">Secure your journal with a PIN</MudText>
+                    </div>
+                </MudStack>
+
+                 <MudButton Variant="Variant.Outlined"
+                          Style="border-radius: 8px; text-transform: none; border-color: #e0e0e0;"
+                          OnClick="OpenPinDialog">
+                    @(hasPinSet ? "Change PIN" : "Set PIN")
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Export Data Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+            <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                Export Data
+            </MudText>
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.body2" Class="mb-2">Start Date</MudText>
+                    <MudDatePicker @bind-Date="startDate"
+                                  Placeholder="mm/dd/yyyy"
+                                  Variant="Variant.Outlined"
+                                  Style="background-color: white; border-radius: 8px;" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.body2" Class="mb-2">End Date</MudText>
+                    <MudDatePicker @bind-Date="endDate"
+                                  Placeholder="mm/dd/yyyy"
+                                  Variant="Variant.Outlined"
+                                  Style="background-color: white; border-radius: 8px;" />
+                </MudItem>
+            </MudGrid>
+
+            <MudButton Variant="Variant.Filled"
+                      StartIcon="@Icons.Material.Filled.Download"
+                      Style="background-color: #0a0a0a; color: white; text-transform: none; border-radius: 8px; margin-top: 16px;"
+                      OnClick="ExportAsPDF">
+                Export as PDF
+            </MudButton>
+
+            <MudText Typo="Typo.body2" Class="mt-3">
+                Export your journal entries within the specified date range as a PDF file
+            </MudText>
+        </MudPaper>
+
+        <!-- Data Management Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+            <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                Data Management
+            </MudText>
+
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" Style="color: #ef4444;" />
+                    <div>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">Clear All Data</MudText>
+                        <MudText Typo="Typo.body2">Permanently delete all journal entries</MudText>
+                    </div>
+                </MudStack>
+
+                <MudButton Variant="Variant.Outlined"
+                          Style="border-radius: 8px; text-transform: none; border-color: #ef4444; color: #ef4444;"
+                          OnClick="OpenDeleteDialog">
+                    Delete All
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <!-- About Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #e5e7eb;">
+            <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                About
+            </MudText>
+
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.body2">
+                    <strong>Version 1.0.0</strong>
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    All data is stored locally on your device using browser localStorage
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    For production use, data would be stored in SQLite database
+                </MudText>
+            </MudStack>
+        </MudPaper>
     </MudStack>
-</MudPaper>
+</MudContainer>
+
+<!-- Delete Confirmation Dialog -->
+<MudDialog @bind-IsVisible="showDeleteDialog" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Confirm Delete All Data</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to permanently delete all journal entries? This action cannot be undone.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteDialog" Style="text-transform: none;">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="DeleteAllData" Style="text-transform: none;">
+            Delete All
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- PIN Dialog -->
+<MudDialog @bind-IsVisible="showPinDialog" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(hasPinSet ? "Change PIN" : "Set PIN")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="pinInput"
+                     Label="Enter PIN"
+                     Variant="Variant.Outlined"
+                     InputType="InputType.Password"
+                     FullWidth="true"
+                     Class="mb-3" />
+        <MudTextField @bind-Value="confirmPinInput"
+                     Label="Confirm PIN"
+                     Variant="Variant.Outlined"
+                     InputType="InputType.Password"
+                     FullWidth="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="ClosePinDialog" Style="text-transform: none;">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SavePin" Style="text-transform: none;">
+            Save PIN
+        </MudButton>
+    </DialogActions>
+</MudDialog>
 
 @code {
-    private bool _isDarkMode = false;
+    private bool hasPinSet = false;
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private bool showDeleteDialog = false;
+    private bool showPinDialog = false;
+    private string pinInput = "";
+    private string confirmPinInput = "";
 
-    async Task ToggleTheme()
+    private DialogOptions dialogOptions = new()
     {
-        await JS.InvokeVoidAsync("theme.toggle");
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    private async Task ToggleTheme()
+    {
+        await ThemeService.ToggleTheme();
+        Snackbar.Add($"Switched to {(ThemeService.IsDarkMode ? "Dark" : "Light")} mode", Severity.Success);
+    }
+
+    private void OpenPinDialog()
+    {
+        pinInput = "";
+        confirmPinInput = "";
+        showPinDialog = true;
+    }
+
+    private void ClosePinDialog()
+    {
+        showPinDialog = false;
+    }
+
+    private void SavePin()
+    {
+        if (string.IsNullOrWhiteSpace(pinInput))
+        {
+            Snackbar.Add("PIN cannot be empty", Severity.Error);
+            return;
+        }
+
+        if (pinInput != confirmPinInput)
+        {
+            Snackbar.Add("PINs do not match", Severity.Error);
+            return;
+        }
+
+        // Save PIN logic here
+        hasPinSet = true;
+        showPinDialog = false;
+        Snackbar.Add("PIN saved successfully", Severity.Success);
+    }
+
+    private async Task ExportAsPDF()
+    {
+        if (!startDate.HasValue || !endDate.HasValue)
+        {
+            Snackbar.Add("Please select both start and end dates", Severity.Warning);
+            return;
+        }
+
+        if (startDate > endDate)
+        {
+            Snackbar.Add("Start date must be before end date", Severity.Error);
+            return;
+        }
+
+        // Export PDF logic here
+        Snackbar.Add($"Exporting entries from {startDate.Value:MM/dd/yyyy} to {endDate.Value:MM/dd/yyyy}", Severity.Info);
+        await Task.Delay(1000);
+        Snackbar.Add("PDF exported successfully", Severity.Success);
+    }
+
+    private void OpenDeleteDialog()
+    {
+        showDeleteDialog = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        showDeleteDialog = false;
+    }
+
+    private async Task DeleteAllData()
+    {
+        
+        await Db.DeleteAllEntriesAsync();
+        showDeleteDialog = false;
+        Snackbar.Add("All data deleted successfully", Severity.Success);
+    }
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
     }
 }

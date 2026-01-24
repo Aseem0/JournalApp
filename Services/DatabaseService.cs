@@ -163,6 +163,17 @@ namespace JournalApp.Services
             await cmd.ExecuteNonQueryAsync();
         }
 
+        public async Task DeleteAllEntriesAsync()
+        {
+            using var connection = new SqliteConnection($"Data Source={_dbPath}");
+            await connection.OpenAsync();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM JournalItems";
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
 
     }
 }

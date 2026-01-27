@@ -195,25 +195,27 @@
     {
         if (!entries.Any()) return 0;
 
-        var sortedEntries = entries.OrderByDescending(e => e.EntryDate).ToList();
+        // Get unique dates ordered by descending (latest first)
+        var sortedDates = entries.Select(e => e.EntryDate.Date).Distinct().OrderByDescending(d => d).ToList();
+        
         var today = DateTime.Today;
-        var streak = 0;
-        var currentDate = today;
+        var latestEntry = sortedDates.First();
 
-        // Check if there's an entry for today or yesterday
-        var latestEntry = sortedEntries.First().EntryDate.Date;
+        // If no entry today and no entry yesterday, the streak is broken
         if (latestEntry != today && latestEntry != today.AddDays(-1))
             return 0;
 
-        foreach (var entry in sortedEntries)
+        var streak = 1;
+        for (int i = 0; i < sortedDates.Count - 1; i++)
         {
-            if (entry.EntryDate.Date == currentDate || entry.EntryDate.Date == currentDate.AddDays(-1))
+            // If the next entry is exactly one day before the current one, the streak continues
+            if ((sortedDates[i] - sortedDates[i + 1]).TotalDays == 1)
             {
                 streak++;
-                currentDate = entry.EntryDate.Date.AddDays(-1);
             }
             else
             {
+                // Streak broken
                 break;
             }
         }

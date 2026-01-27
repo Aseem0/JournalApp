@@ -123,6 +123,34 @@ namespace JournalApp.Services
             return null;
         }
 
+        // ================= READ BY DATE =================
+        public JournalItem? GetEntryByDate(DateTime date)
+        {
+            using var connection = new SqliteConnection($"Data Source={_dbPath}");
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT * FROM JournalItems WHERE EntryDate = $date LIMIT 1";
+            cmd.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return new JournalItem
+                {
+                    Id = reader.GetInt32(0),
+                    EntryDate = DateTime.Parse(reader.GetString(1)),
+                    Content = reader.GetString(2),
+                    PrimaryMood = reader.GetString(3),
+                    SecondaryMoods = reader.GetString(4),
+                    Tags = reader.GetString(5),
+                    CreatedAt = DateTime.Parse(reader.GetString(6))
+                };
+            }
+
+            return null;
+        }
+
         // ================= UPDATE =================
         public void UpdateEntry(JournalItem entry)
         {

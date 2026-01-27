@@ -3,6 +3,7 @@
 @inject DatabaseService Db
 @inject ISnackbar Snackbar
 @inject JournalApp.Services.ThemeService ThemeService
+@inject JournalApp.Services.SecurityService Security
 @inject JournalApp.Services.PdfExportService PdfService
 @inject CommunityToolkit.Maui.Storage.IFileSaver FileSaver
 @implements IDisposable
@@ -53,11 +54,21 @@
                     </div>
                 </MudStack>
 
-                 <MudButton Variant="Variant.Outlined"
-                          Style="border-radius: 8px; text-transform: none; border-color: #444;"
-                          OnClick="OpenPinDialog">
-                    @(hasPinSet ? "Change PIN" : "Set PIN")
-                </MudButton>
+                <MudStack Row="true" Spacing="2">
+                    @if (hasPinSet)
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                  Style="border-radius: 8px; text-transform: none; border-color: #ef4444; color: #ef4444;"
+                                  OnClick="RemovePin">
+                            Remove PIN
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Outlined"
+                              Style="border-radius: 8px; text-transform: none; border-color: #444;"
+                              OnClick="OpenPinDialog">
+                        @(hasPinSet ? "Change PIN" : "Set PIN")
+                    </MudButton>
+                </MudStack>
             </MudStack>
         </MudPaper>
 
@@ -142,7 +153,7 @@
 </MudContainer>
 
 <!-- Delete Confirmation Dialog -->
-<MudDialog @bind-IsVisible="showDeleteDialog" Options="dialogOptions">
+<MudDialog @bind-Visible="showDeleteDialog" Options="dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">Confirm Delete All Data</MudText>
     </TitleContent>
@@ -158,21 +169,23 @@
 </MudDialog>
 
 <!-- PIN Dialog -->
-<MudDialog @bind-IsVisible="showPinDialog" Options="dialogOptions">
+<MudDialog @bind-Visible="showPinDialog" Options="dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">@(hasPinSet ? "Change PIN" : "Set PIN")</MudText>
     </TitleContent>
     <DialogContent>
         <MudTextField @bind-Value="pinInput"
-                     Label="Enter PIN"
+                     Label="Enter 4-Digit PIN"
                      Variant="Variant.Outlined"
                      InputType="InputType.Password"
+                     MaxLength="4"
                      FullWidth="true"
                      Class="mb-3" />
         <MudTextField @bind-Value="confirmPinInput"
-                     Label="Confirm PIN"
+                     Label="Confirm 4-Digit PIN"
                      Variant="Variant.Outlined"
                      InputType="InputType.Password"
+                     MaxLength="4"
                      FullWidth="true" />
     </DialogContent>
     <DialogActions>
@@ -210,6 +223,7 @@
         pinInput = "";
         confirmPinInput = "";
         showPinDialog = true;
+        StateHasChanged();
     }
 
     private void ClosePinDialog()
@@ -217,11 +231,11 @@
         showPinDialog = false;
     }
 
-    private void SavePin()
+    private async Task SavePin()
     {
-        if (string.IsNullOrWhiteSpace(pinInput))
+        if (pinInput.Length != 4 || !pinInput.All(char.IsDigit))
         {
-            Snackbar.Add("PIN cannot be empty", Severity.Error);
+            Snackbar.Add("PIN must be exactly 4 digits", Severity.Error);
             return;
         }
 
@@ -231,10 +245,17 @@
             return;
         }
 
-        // Save PIN logic here
+        await Security.SetPinAsync(pinInput);
         hasPinSet = true;
         showPinDialog = false;
         Snackbar.Add("PIN saved successfully", Severity.Success);
+    }
+
+    private async Task RemovePin()
+    {
+        await Security.SetPinAsync("");
+        hasPinSet = false;
+        Snackbar.Add("PIN removed", Severity.Success);
     }
 
     private async Task ExportAsPDF()
@@ -300,9 +321,10 @@
         Snackbar.Add("All data deleted successfully", Severity.Success);
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         ThemeService.OnThemeChanged += StateHasChanged;
+        hasPinSet = await Security.IsPinSetAsync();
     }
 
     public void Dispose()

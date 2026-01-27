@@ -455,8 +455,9 @@ body {
         color: #fff;
     }
 
-        body.dark .sidebar {
+        body.dark .sidebar, body.dark .mud-drawer {
             background-color: #000000;
+            border-right: 1px solid #333 !important;
         }
 
         body.dark .entry-card {
@@ -529,4 +530,37 @@ body.dark .entry-form {
     padding: 1rem;
     border-radius: 8px;
     border: 1px solid #444;
+}
+
+/* Sidebar Nav Button Overrides */
+.nav-button {
+    border-radius: 12px !important;
+}
+
+/* KILLS ALL DEFAULT MUD BLAZOR HOVER OVERLAYS */
+.nav-button.mud-button-root::before, 
+.nav-button.mud-button-root::after {
+    display: none !important;
+    background-color: transparent !important;
+    opacity: 0 !important;
+}
+
+/* Light Mode Hover - ONLY in light mode */
+body:not(.dark) .nav-button:not(.mud-button-filled):hover {
+    background-color: #eeeeee !important;
+    color: #000000 !important;
+}
+
+/* Dark Mode Hover - STRICTLY REMOVED */
+body.dark .nav-button.mud-button-root.mud-button-text:hover {
+    background-color: transparent !important;
+    color: #ffffff !important;
+}
+
+/* Ensure active (white) state remains white on hover without changes */
+body.dark .nav-button.mud-button-filled,
+body.dark .nav-button.mud-button-filled:hover {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
 }

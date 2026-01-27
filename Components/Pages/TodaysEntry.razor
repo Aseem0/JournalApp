@@ -226,6 +226,7 @@ else
     JournalItem Entry { get; set; } = new JournalItem();
     bool EntryLoaded { get; set; } = false;
     int wordCount = 0;
+    private bool _needsEditorUpdate = false;
 
     // Mood Dialog
     bool showMoodDialog = false;
@@ -260,7 +261,11 @@ else
         allMoods.AddRange(positiveMoods);
         allMoods.AddRange(neutralMoods);
         allMoods.AddRange(negativeMoods);
+    }
 
+    protected override void OnParametersSet()
+    {
+        EntryLoaded = false;
         if (Id.HasValue)
         {
             var existing = Db.GetEntryById(Id.Value);
@@ -270,15 +275,26 @@ else
                 CreatedAt = DateTime.Now,
                 PrimaryMood = "Calm"
             };
+            _needsEditorUpdate = true;
         }
         else
         {
+            // Check if there's already an entry for today
+            var existingForToday = Db.GetEntryByDate(DateTime.Today);
+            if (existingForToday != null)
+            {
+                // Redirect to the existing entry
+                Nav.NavigateTo($"/entry/{existingForToday.Id}");
+                return;
+            }
+
             Entry = new JournalItem
             {
                 EntryDate = DateTime.Today,
                 CreatedAt = DateTime.Now,
                 PrimaryMood = "Calm"
             };
+            _needsEditorUpdate = true;
         }
 
         UpdateWordCount();
@@ -313,6 +329,15 @@ else
         }
         else
         {
+            // Double check for existing entry for this date just in case
+            var existing = Db.GetEntryByDate(Entry.EntryDate);
+            if (existing != null)
+            {
+                Snackbar.Add("An entry already exists for this date", Severity.Error);
+                Nav.NavigateTo($"/entry/{existing.Id}");
+                return;
+            }
+
             Db.SaveEntry(Entry);
             Snackbar.Add("Entry saved successfully", Severity.Success);
         }
@@ -445,10 +470,16 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (EntryLoaded && _objRef == null)
         {
             _objRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("quillHelpers.initQuill", "quill-editor", Entry.Content, _objRef);
+            _needsEditorUpdate = false;
+        }
+        else if (EntryLoaded && _objRef != null && _needsEditorUpdate)
+        {
+            await JS.InvokeVoidAsync("quillHelpers.setQuillContent", Entry.Content);
+            _needsEditorUpdate = false;
         }
     }
 

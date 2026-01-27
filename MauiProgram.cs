@@ -34,6 +34,7 @@ namespace JournalApp
 #endif
             builder.Services.AddSingleton<DatabaseService>();
             builder.Services.AddSingleton<ThemeService>();
+            builder.Services.AddSingleton<SecurityService>();
             builder.Services.AddSingleton<PdfExportService>();
             builder.Services.AddSingleton(CommunityToolkit.Maui.Storage.FileSaver.Default);
             builder.Services.AddMudServices();

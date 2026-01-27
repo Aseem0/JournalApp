@@ -1,0 +1,234 @@
+@using JournalApp.Services
+@inject SecurityService Security
+@inject ISnackbar Snackbar
+
+<div class="lock-screen @(IsFadingOut ? "fade-out" : "")">
+    <div class="lock-container">
+        <MudStack AlignItems="AlignItems.Center" Spacing="6">
+            <div class="lock-header">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Class="mb-2" />
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">Secure Journal</MudText>
+                <MudText Typo="Typo.body2" Class="opacity-70">Enter your PIN to unlock</MudText>
+            </div>
+
+            <div class="pin-display">
+                @foreach (var i in Enumerable.Range(0, 4))
+                {
+                    <div class="pin-dot @(pin.Length > i ? "filled" : "")"></div>
+                }
+            </div>
+
+            <div class="keypad">
+                @foreach (var num in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back" })
+                {
+                    @if (num == "")
+                    {
+                        <div></div>
+                    }
+                    else if (num == "back")
+                    {
+                        <button class="keypad-btn" @onclick="Backspace">
+                            <MudIcon Icon="@Icons.Material.Filled.Backspace" Size="Size.Small" />
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="keypad-btn" @onclick="() => AppendDigit(num)">@num</button>
+                    }
+                }
+            </div>
+            
+            @if (errorMessage != null)
+            {
+                <MudText Color="Color.Error" Typo="Typo.body2" Class="mt-2 shake">@errorMessage</MudText>
+            }
+
+            <MudButton Variant="Variant.Text" 
+                       Style="text-transform: none; font-size: 0.8rem; margin-top: 2rem; color: #666;"
+                       OnClick="EmergencyReset">
+                Emergency Reset (Temporary)
+            </MudButton>
+        </MudStack>
+    </div>
+</div>
+
+<style>
+    .lock-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #000;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    body:not(.dark) .lock-screen {
+        background-color: #fff;
+        color: #000;
+    }
+
+    .lock-container {
+        max-width: 400px;
+        width: 100%;
+        padding: 2rem;
+    }
+
+    .lock-header {
+        text-align: center;
+    }
+
+    .opacity-70 {
+        opacity: 0.7;
+    }
+
+    .pin-display {
+        display: flex;
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .pin-dot {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #555;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+    }
+
+    body.dark .pin-dot {
+        border-color: #444;
+    }
+
+    .pin-dot.filled {
+        background-color: #fff;
+        border-color: #fff;
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(255,255,255,0.3);
+    }
+
+    body:not(.dark) .pin-dot.filled {
+        background-color: #000;
+        border-color: #000;
+    }
+
+    .keypad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .keypad-btn {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        border: 1px solid #333;
+        background: transparent;
+        color: white;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    body:not(.dark) .keypad-btn {
+        color: black;
+        border-color: #eee;
+    }
+
+    .keypad-btn:hover {
+        background-color: rgba(255,255,255,0.1);
+    }
+
+    body:not(.dark) .keypad-btn:hover {
+        background-color: rgba(0,0,0,0.05);
+    }
+
+    .keypad-btn:active {
+        transform: scale(0.95);
+        background-color: rgba(255,255,255,0.2);
+    }
+
+    .fade-out {
+        animation: fadeOut 0.4s forwards;
+    }
+
+    @@keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; pointer-events: none; }
+    }
+
+    .shake {
+        animation: shake 0.4s;
+    }
+
+    @@keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+</style>
+
+@code {
+    private string pin = "";
+    private string? errorMessage;
+    private bool IsFadingOut = false;
+
+    [Parameter] public EventCallback OnUnlocked { get; set; }
+
+    private async Task AppendDigit(string digit)
+    {
+        if (pin.Length < 4)
+        {
+            pin += digit;
+            errorMessage = null;
+
+            if (pin.Length == 4)
+            {
+                await Task.Delay(200); // Small pause for visual feedback
+                await Verify();
+            }
+        }
+    }
+
+    private void Backspace()
+    {
+        if (pin.Length > 0)
+        {
+            pin = pin[..^1];
+            errorMessage = null;
+        }
+    }
+
+    private async Task Verify()
+    {
+        var success = await Security.VerifyPinAsync(pin);
+        if (success)
+        {
+            IsFadingOut = true;
+            await Task.Delay(400); // Wait for animation
+            await OnUnlocked.InvokeAsync();
+        }
+        else
+        {
+            pin = "";
+            errorMessage = "Incorrect PIN. Try again.";
+            StateHasChanged();
+        }
+    }
+
+    private async Task EmergencyReset()
+    {
+        await Security.SetPinAsync("");
+        await OnUnlocked.InvokeAsync();
+        Snackbar.Add("PIN has been cleared. Please set a 4-digit PIN in settings.", Severity.Warning);
+    }
+}

@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject JournalApp.Services.ThemeService ThemeService
+@inject JournalApp.Services.SecurityService Security
 @implements IDisposable
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@ThemeService.IsDarkMode" />
@@ -8,6 +9,11 @@
 <MudDialogProvider />
 @* Needed for snackbars *@
 <MudSnackbarProvider />
+
+@if (IsLocked)
+{
+    <JournalApp.Components.Shared.LockScreen OnUnlocked="Unlock" />
+}
 
 <MudLayout>
     <MudDrawer Open="true" Variant="DrawerVariant.Responsive" Elevation="1" Anchor="Anchor.Start" Class="mud-width-300">
@@ -22,6 +28,8 @@
 </MudLayout>
 
 @code {
+    private bool IsLocked = true;
+
     private MudTheme _theme = new MudTheme()
     {
         PaletteDark = new PaletteDark()
@@ -37,9 +45,18 @@
         }
     };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         ThemeService.OnThemeChanged += StateHasChanged;
+        
+        var hasPin = await Security.IsPinSetAsync();
+        IsLocked = hasPin && !Security.IsAuthenticated;
+    }
+
+    private void Unlock()
+    {
+        IsLocked = false;
+        StateHasChanged();
     }
 
     public void Dispose()

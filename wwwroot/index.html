@@ -81,6 +81,11 @@
             ? window.quillInstance.root.innerHTML
             : "";
         },
+        setQuillContent: function (content) {
+          if (window.quillInstance) {
+            window.quillInstance.root.innerHTML = content || "";
+          }
+        },
       };
     </script>
   </body>

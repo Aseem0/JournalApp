@@ -171,13 +171,16 @@
 </style>
 
 @code {
+    // --- Component State ---
     private string _pin = string.Empty;
     private string? _errorMessage;
     private bool _isFadingOut;
     private readonly string[] _keypadNumbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
 
+    // --- Events ---
     [Parameter] public EventCallback OnUnlocked { get; set; }
 
+    // Appends a digit to the current PIN and triggers verification if length reaches 4.
     private async Task HandleAppendDigit(string digit)
     {
         if (_pin.Length < 4)
@@ -187,12 +190,14 @@
 
             if (_pin.Length == 4)
             {
+                // Small delay for visual feedback before verification
                 await Task.Delay(200);
                 await VerifyPinAsync();
             }
         }
     }
 
+    // Removes the last entered digit.
     private void HandleBackspace()
     {
         if (_pin.Length > 0)
@@ -202,11 +207,13 @@
         }
     }
 
+    // Verifies the PIN with SecurityService and handles the unlock animation.
     private async Task VerifyPinAsync()
     {
         var success = await Security.VerifyPinAsync(_pin);
         if (success)
         {
+            // Trigger fade-out animation and then notify parent
             _isFadingOut = true;
             await Task.Delay(400);
             await OnUnlocked.InvokeAsync();

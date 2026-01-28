@@ -249,9 +249,7 @@ else
         _allMoods.AddRange(_negativeMoods);
     }
 
-    /// <summary>
-    /// Loads the entry based on the route Parameter (Id) or defaults to today's entry.
-    /// </summary>
+    // Loads the entry based on the route Parameter (Id) or defaults to today's entry.
     protected override async Task OnParametersSetAsync()
     {
         _isEntryLoaded = false;
@@ -289,9 +287,7 @@ else
         PrimaryMood = "Calm"
     };
 
-    /// <summary>
-    /// Strips HTML and counts space-separated words.
-    /// </summary>
+    // Strips HTML and counts space-separated words.
     private void UpdateWordCount()
     {
         if (string.IsNullOrWhiteSpace(_entry.Content))
@@ -465,9 +461,7 @@ else
         }
     }
 
-    /// <summary>
-    /// JS callback to sync editor HTML with C# model.
-    /// </summary>
+    // JS callback to sync editor HTML with C# model.
     [JSInvokable]
     public void UpdateEntryContent(string htmlContent)
     {

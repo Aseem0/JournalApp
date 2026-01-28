@@ -4,32 +4,23 @@ using System.Text;
 
 namespace JournalApp.Services;
 
-/// <summary>
-/// Service responsible for handling application security, including PIN protection.
-/// </summary>
+// Service responsible for handling application security, including PIN protection.
 public class SecurityService
 {
     private const string PinKey = "journal_pin_hash";
     private bool _isAuthenticated;
 
-    /// <summary>
-    /// Gets a value indicating whether the user is currently authenticated.
-    /// </summary>
+    // Gets a value indicating whether the user is currently authenticated.
     public bool IsAuthenticated => _isAuthenticated;
 
-    /// <summary>
-    /// Checks if a PIN has been set in secure storage.
-    /// </summary>
+    // Checks if a PIN has been set in secure storage.
     public async Task<bool> IsPinSetAsync()
     {
         var pinHash = await SecureStorage.GetAsync(PinKey);
         return !string.IsNullOrEmpty(pinHash);
     }
 
-    /// <summary>
-    /// Sets or removes the application PIN.
-    /// </summary>
-    /// <param name="pin">The PIN to set. If empty, the PIN is removed.</param>
+    // Sets or removes the application PIN.
     public async Task SetPinAsync(string pin)
     {
         // Remove PIN if empty string is provided
@@ -46,11 +37,7 @@ public class SecurityService
         _isAuthenticated = true; // Automatically authenticate when a new PIN is set
     }
 
-    /// <summary>
-    /// Verifies the provided PIN against the stored hash.
-    /// </summary>
-    /// <param name="pin">The PIN to verify.</param>
-    /// <returns>True if the PIN is correct or no PIN is set; otherwise, false.</returns>
+    // Verifies the provided PIN against the stored hash.
     public async Task<bool> VerifyPinAsync(string pin)
     {
         var storedHash = await SecureStorage.GetAsync(PinKey);
@@ -71,17 +58,13 @@ public class SecurityService
         return false;
     }
 
-    /// <summary>
-    /// Manually locks the application.
-    /// </summary>
+    // Manually locks the application.
     public void Lock()
     {
         _isAuthenticated = false;
     }
 
-    /// <summary>
-    /// Computes a SHA256 hash of the input string.
-    /// </summary>
+    // Computes a SHA256 hash of the input string.
     private static string ComputeHash(string input)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));

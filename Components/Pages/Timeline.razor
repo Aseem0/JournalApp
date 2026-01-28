@@ -194,9 +194,7 @@
         }
     }
 
-    /// <summary>
-    /// Filters the loaded entries based on search query, selected moods, and selected tags.
-    /// </summary>
+    // Filters the loaded entries based on search query, selected moods, and selected tags.
     private void HandleFilterEntries()
     {
         if (_entries == null) return;
@@ -227,9 +225,7 @@
         UpdatePagination();
     }
 
-    /// <summary>
-    /// Slices the filtered list into the current page for display.
-    /// </summary>
+    // Slices the filtered list into the current page for display.
     private void UpdatePagination()
     {
         if (_filteredEntries.Count == 0)
@@ -290,9 +286,7 @@
         HandleCloseFilterDialog();
     }
 
-    /// <summary>
-    /// Generates a plain-text snippet of the content for the timeline list.
-    /// </summary>
+    // Generates a plain-text snippet of the content for the timeline list.
     private static string GetPreviewText(string content)
     {
         if (string.IsNullOrEmpty(content)) return string.Empty;

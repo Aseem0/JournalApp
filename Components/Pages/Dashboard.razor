@@ -160,9 +160,7 @@
         await LoadDashboardDataAsync();
     }
 
-    /// <summary>
-    /// Loads all necessary data for the dashboard overview.
-    /// </summary>
+    // Loads all necessary data for the dashboard overview.
     private async Task LoadDashboardDataAsync()
     {
         var allEntries = (await Db.GetAllEntriesAsync()).ToList();
@@ -175,9 +173,7 @@
         CalculateWeeklyMoodDistribution(allEntries);
     }
 
-    /// <summary>
-    /// Calculates the current consecutive journaling streak.
-    /// </summary>
+    // Calculates the current consecutive journaling streak.
     private static int CalculateCurrentStreak(List<JournalItem> entries)
     {
         if (!entries.Any()) return 0;
@@ -210,9 +206,7 @@
         return streak;
     }
 
-    /// <summary>
-    /// Finds the historically longest journaling streak.
-    /// </summary>
+    // Finds the historically longest journaling streak.
     private static int CalculateLongestStreak(List<JournalItem> entries)
     {
         if (!entries.Any()) return 0;
@@ -240,9 +234,7 @@
         return maxStreak;
     }
 
-    /// <summary>
-    /// Calculates how many days were missed since the first entry.
-    /// </summary>
+    // Calculates how many days were missed since the first entry.
     private static int CalculateMissedDays(List<JournalItem> entries)
     {
         if (!entries.Any()) return 0;
@@ -259,9 +251,7 @@
         return totalDays - entriesInPeriod;
     }
 
-    /// <summary>
-    /// Tallies the distribution of moods for the current week starting from Sunday.
-    /// </summary>
+    // Tallies the distribution of moods for the current week starting from Sunday.
     private void CalculateWeeklyMoodDistribution(List<JournalItem> entries)
     {
         var weekStart = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek);
@@ -276,9 +266,7 @@
     private void HandleWriteNewEntry() => Nav.NavigateTo("/entry");
     private void HandleViewEntry(int id) => Nav.NavigateTo($"/entry/{id}");
 
-    /// <summary>
-    /// Converts HTML content to plain text and truncates it for preview.
-    /// </summary>
+    // Converts HTML content to plain text and truncates it for preview.
     private static string GetPreviewText(string html)
     {
         if (string.IsNullOrEmpty(html)) return string.Empty;

@@ -3,9 +3,7 @@ using JournalApp.Models;
 
 namespace JournalApp.Services;
 
-/// <summary>
-/// Service responsible for all database operations, managing journal entries in a SQLite database.
-/// </summary>
+// Service responsible for all database operations, managing journal entries in a SQLite database.
 public class DatabaseService
 {
     private readonly string _dbPath;
@@ -18,9 +16,7 @@ public class DatabaseService
         InitializeDatabase();
     }
 
-    /// <summary>
-    /// Initializes the SQLite database and creates the necessary tables if they don't exist.
-    /// </summary>
+    // Initializes the SQLite database and creates the necessary tables if they don't exist.
     private void InitializeDatabase()
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -41,10 +37,7 @@ public class DatabaseService
         command.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Saves a new journal entry to the database.
-    /// </summary>
-    /// <param name="entry">The entry to save.</param>
+    // Saves a new journal entry to the database.
     public async Task SaveEntryAsync(JournalItem entry)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -66,10 +59,7 @@ public class DatabaseService
         await command.ExecuteNonQueryAsync();
     }
 
-    /// <summary>
-    /// Retrieves all journal entries ordered by date (newest first).
-    /// </summary>
-    /// <returns>A collection of all journal entries.</returns>
+    // Retrieves all journal entries ordered by date (newest first).
     public async Task<IEnumerable<JournalItem>> GetAllEntriesAsync()
     {
         var entries = new List<JournalItem>();
@@ -89,11 +79,7 @@ public class DatabaseService
         return entries;
     }
 
-    /// <summary>
-    /// Retrieves a specific journal entry by its unique ID.
-    /// </summary>
-    /// <param name="id">The ID of the entry to find.</param>
-    /// <returns>The found entry, or null if not found.</returns>
+    // Retrieves a specific journal entry by its unique ID.
     public async Task<JournalItem?> GetEntryByIdAsync(int id)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -107,11 +93,7 @@ public class DatabaseService
         return await reader.ReadAsync() ? MapToJournalItem(reader) : null;
     }
 
-    /// <summary>
-    /// Retrieves a journal entry for a specific calendar date.
-    /// </summary>
-    /// <param name="date">The date to search for.</param>
-    /// <returns>The entry for that date, or null if none exists.</returns>
+    // Retrieves a journal entry for a specific calendar date.
     public async Task<JournalItem?> GetEntryByDateAsync(DateTime date)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -125,10 +107,7 @@ public class DatabaseService
         return await reader.ReadAsync() ? MapToJournalItem(reader) : null;
     }
 
-    /// <summary>
-    /// Updates an existing journal entry in the database.
-    /// </summary>
-    /// <param name="entry">The entry with updated values.</param>
+    // Updates an existing journal entry in the database.
     public async Task UpdateEntryAsync(JournalItem entry)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -152,10 +131,7 @@ public class DatabaseService
         await command.ExecuteNonQueryAsync();
     }
 
-    /// <summary>
-    /// Deletes a specific journal entry from the database.
-    /// </summary>
-    /// <param name="id">The ID of the entry to delete.</param>
+    // Deletes a specific journal entry from the database.
     public async Task DeleteEntryAsync(int id)
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -168,9 +144,7 @@ public class DatabaseService
         await command.ExecuteNonQueryAsync();
     }
 
-    /// <summary>
-    /// Permanently deletes all journal entries from the database.
-    /// </summary>
+    // Permanently deletes all journal entries from the database.
     public async Task DeleteAllEntriesAsync()
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
@@ -182,9 +156,7 @@ public class DatabaseService
         await command.ExecuteNonQueryAsync();
     }
 
-    /// <summary>
-    /// Maps a single SQLite database record to a JournalItem model.
-    /// </summary>
+    // Maps a single SQLite database record to a JournalItem model.
     private static JournalItem MapToJournalItem(SqliteDataReader reader)
     {
         return new JournalItem

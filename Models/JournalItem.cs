@@ -2,50 +2,32 @@
 
 namespace JournalApp.Models;
 
-/// <summary>
-/// Represents a single journal entry in the application.
-/// </summary>
+// Represents a single journal entry in the application.
 public class JournalItem
 {
-    /// <summary>
-    /// Unique identifier for the journal entry (auto-incremented by database).
-    /// </summary>
+    // Unique identifier for the journal entry (auto-incremented by database).
     public int Id { get; set; }
     
-    /// <summary>
-    /// The date the journal entry refers to (calendar date).
-    /// </summary>
+    // The date the journal entry refers to (calendar date).
     public DateTime EntryDate { get; set; }
     
-    /// <summary>
-    /// The main HTML content of the journal entry, typically captured from the rich text editor.
-    /// </summary>
+    // The main HTML content of the journal entry, typically captured from the rich text editor.
     public string Content { get; set; } = string.Empty;
     
-    /// <summary>
-    /// The primary mood selected for this entry (e.g., "Happy", "Calm").
-    /// </summary>
+    // The primary mood selected for this entry (e.g., "Happy", "Calm").
     public string PrimaryMood { get; set; } = string.Empty;
     
-    /// <summary>
-    /// Stores up to two secondary moods as a JSON serialized string for database storage.
-    /// </summary>
+    // Stores up to two secondary moods as a JSON serialized string for database storage.
     public string SecondaryMoods { get; set; } = "[]";
     
-    /// <summary>
-    /// Stores associated tags as a JSON serialized string for database storage.
-    /// </summary>
+    // Stores associated tags as a JSON serialized string for database storage.
     public string Tags { get; set; } = "[]";
     
-    /// <summary>
-    /// The exact timestamp when this entry was first created.
-    /// </summary>
+    // The exact timestamp when this entry was first created.
     public DateTime CreatedAt { get; set; }
 
-    /// <summary>
-    /// Helper property to work with Tags as a List of strings.
-    /// Handles serialization/deserialization automatically.
-    /// </summary>
+    // Helper property to work with Tags as a List of strings.
+    // Handles serialization/deserialization automatically.
     public List<string> TagList
     {
         get => string.IsNullOrWhiteSpace(Tags)
@@ -55,10 +37,8 @@ public class JournalItem
         set => Tags = JsonSerializer.Serialize(value);
     }
 
-    /// <summary>
-    /// Helper property to work with SecondaryMoods as a List of strings.
-    /// Handles serialization/deserialization automatically.
-    /// </summary>
+    // Helper property to work with SecondaryMoods as a List of strings.
+    // Handles serialization/deserialization automatically.
     public List<string> SecondaryMoodList
     {
         get => string.IsNullOrWhiteSpace(SecondaryMoods)

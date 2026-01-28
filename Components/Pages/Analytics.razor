@@ -140,9 +140,7 @@
         await LoadAnalyticsDataAsync();
     }
 
-    /// <summary>
-    /// Aggregates all journaling data and computes metrics for visualization.
-    /// </summary>
+    // Aggregates all journaling data and computes metrics for visualization.
     private async Task LoadAnalyticsDataAsync()
     {
         var entries = (await Db.GetAllEntriesAsync()).ToList();
@@ -156,9 +154,7 @@
         }
     }
 
-    /// <summary>
-    /// Groups entries into Positive, Neutral, and Negative categories based on moods.
-    /// </summary>
+    // Groups entries into Positive, Neutral, and Negative categories based on moods.
     private void CalculateMoodDistribution(List<JournalItem> entries)
     {
         var positiveMoods = new[] { "Happy", "Excited", "Grateful", "Peaceful", "Proud", "Hopeful" };
@@ -193,9 +189,7 @@
         _ => "#6b7280"
     };
 
-    /// <summary>
-    /// Identifies the most frequently used tags for the bar chart.
-    /// </summary>
+    // Identifies the most frequently used tags for the bar chart.
     private void CalculateTagUsage(List<JournalItem> entries)
     {
         var allTags = entries.SelectMany(e => e.TagList).ToList();
@@ -212,9 +206,7 @@
         }
     }
 
-    /// <summary>
-    /// Maps word counts over time for the line chart trend.
-    /// </summary>
+    // Maps word counts over time for the line chart trend.
     private void CalculateWordCountTrend(List<JournalItem> entries)
     {
         _wordCountData = entries.OrderBy(e => e.EntryDate)
@@ -233,9 +225,7 @@
         ];
     }
 
-    /// <summary>
-    /// Utility to calculate word count for a single HTML content string.
-    /// </summary>
+    // Utility to calculate word count for a single HTML content string.
     private static int CountWords(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0;
@@ -244,9 +234,7 @@
                     .Length;
     }
 
-    /// <summary>
-    /// Computes high-level summary metrics.
-    /// </summary>
+    // Computes high-level summary metrics.
     private void CalculateSummaryStats(List<JournalItem> entries)
     {
         var moodGroup = entries.GroupBy(e => e.PrimaryMood)
@@ -264,8 +252,6 @@
         _averageWordCount = entries.Any() ? totalWords / entries.Count : 0;
     }
 
-    /// <summary>
-    /// Calculates responsive height for the custom CSS bar chart.
-    /// </summary>
+    // Calculates responsive height for the custom CSS bar chart.
     private int GetBarHeight(int count) => (int)Math.Max(10, (double)count / _maxTagCount * 100);
 }

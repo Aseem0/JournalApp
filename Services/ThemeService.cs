@@ -2,21 +2,15 @@
 
 namespace JournalApp.Services;
 
-/// <summary>
-/// Service responsible for managing application theme states (Dark/Light mode).
-/// </summary>
+// Service responsible for managing application theme states (Dark/Light mode).
 public class ThemeService
 {
     private readonly IJSRuntime _js;
 
-    /// <summary>
-    /// Gets a value indicating whether Dark Mode is currently active.
-    /// </summary>
+    // Gets a value indicating whether Dark Mode is currently active.
     public bool IsDarkMode { get; private set; }
 
-    /// <summary>
-    /// Event triggered when the application theme changes.
-    /// </summary>
+    // Event triggered when the application theme changes.
     public event Action? ThemeChanged;
 
     public ThemeService(IJSRuntime js)
@@ -24,9 +18,7 @@ public class ThemeService
         _js = js;
     }
 
-    /// <summary>
-    /// Toggles the application theme between Dark and Light modes.
-    /// </summary>
+    // Toggles the application theme between Dark and Light modes.
     public async Task ToggleThemeAsync()
     {
         // Toggle state and notify subscribers (Blazor components)

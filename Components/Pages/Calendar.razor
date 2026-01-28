@@ -100,10 +100,8 @@
         await LoadCalendarDaysAsync();
     }
 
-    /// <summary>
-    /// Generates a 42-day calendar grid based on the current visible month.
-    /// Includes trailing/leading days from adjacent months.
-    /// </summary>
+    // Generates a 42-day calendar grid based on the current visible month.
+    // Includes trailing/leading days from adjacent months.
     private async Task LoadCalendarDaysAsync()
     {
         _calendarDays.Clear();
@@ -131,9 +129,7 @@
         }
     }
 
-    /// <summary>
-    /// Maps a string mood name to a MoodType category for simplified calendar display.
-    /// </summary>
+    // Maps a string mood name to a MoodType category for simplified calendar display.
     private static MoodType? MapMood(string moodName)
     {
         if (string.IsNullOrEmpty(moodName)) return null;

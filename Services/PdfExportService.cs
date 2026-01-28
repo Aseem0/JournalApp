@@ -8,16 +8,10 @@ using QuestColors = QuestPDF.Helpers.Colors;
 
 namespace JournalApp.Services;
 
-/// <summary>
-/// Service responsible for generating PDF archives of journal entries.
-/// </summary>
+// Service responsible for generating PDF archives of journal entries.
 public class PdfExportService
 {
-    /// <summary>
-    /// Generates a PDF document containing a collection of journal entries.
-    /// </summary>
-    /// <param name="entries">The entries to include in the PDF.</param>
-    /// <returns>A byte array representing the PDF file.</returns>
+    // Generates a PDF document containing a collection of journal entries.
     public byte[] GenerateJournalPdf(IEnumerable<JournalItem> entries)
     {
         return Document.Create(container =>
@@ -72,9 +66,7 @@ public class PdfExportService
         }).GeneratePdf();
     }
 
-    /// <summary>
-    /// Configures global page settings.
-    /// </summary>
+    // Configures global page settings.
     private static void ConfigurePage(PageDescriptor page)
     {
         page.Size(PageSizes.A4);
@@ -83,9 +75,7 @@ public class PdfExportService
         page.DefaultTextStyle(x => x.FontSize(11).FontColor(QuestColors.Black));
     }
 
-    /// <summary>
-    /// Renders a single journal entry row in the PDF.
-    /// </summary>
+    // Renders a single journal entry row in the PDF.
     private void RenderEntry(ColumnDescriptor column, JournalItem entry)
     {
         column.Item().PaddingBottom(15).Column(entryColumn =>
@@ -112,9 +102,7 @@ public class PdfExportService
         });
     }
 
-    /// <summary>
-    /// Strips HTML tags from entry content for PDF rendering.
-    /// </summary>
+    // Strips HTML tags from entry content for PDF rendering.
     private static string StripHtml(string input)
     {
         if (string.IsNullOrEmpty(input)) return string.Empty;

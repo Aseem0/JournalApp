@@ -260,9 +260,7 @@
     }
 
     // --- Data Export Logic ---
-    /// <summary>
-    /// Generates and saves a PDF containing all entries within the selected date range.
-    /// </summary>
+    // Generates and saves a PDF containing all entries within the selected date range.
     private async Task HandleExportAsPdfAsync()
     {
         if (!_startDate.HasValue || !_endDate.HasValue)

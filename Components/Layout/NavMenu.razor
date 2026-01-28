@@ -1,6 +1,6 @@
 ﻿@implements IDisposable
 @inject NavigationManager NavManager
-@inject JournalApp.Services.ThemeService ThemeService
+@inject ThemeService Theme
 @using Microsoft.AspNetCore.Components.Routing
 
 <MudPaper Elevation="0" Class="pa-4" Style="height: 100vh;">
@@ -82,7 +82,7 @@
     protected override void OnInitialized()
     {
         NavManager.LocationChanged += HandleLocationChanged;
-        ThemeService.OnThemeChanged += RefreshUI;
+        Theme.ThemeChanged += RefreshUI;
     }
 
     private void RefreshUI() => InvokeAsync(StateHasChanged);
@@ -95,7 +95,7 @@
     public void Dispose()
     {
         NavManager.LocationChanged -= HandleLocationChanged;
-        ThemeService.OnThemeChanged -= RefreshUI;
+        Theme.ThemeChanged -= RefreshUI;
     }
 
     private bool IsActive(string route)
@@ -117,7 +117,7 @@
     {
         if (IsActive(route))
         {
-            if (ThemeService.IsDarkMode)
+            if (Theme.IsDarkMode)
             {
                 return "background-color: #ffffff !important; color: #000000 !important; border-radius: 12px;" +
                        " text-transform: none; justify-content: flex-start;" +

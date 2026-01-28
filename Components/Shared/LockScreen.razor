@@ -1,8 +1,7 @@
-@using JournalApp.Services
 @inject SecurityService Security
 @inject ISnackbar Snackbar
 
-<div class="lock-screen @(IsFadingOut ? "fade-out" : "")">
+<div class="lock-screen @(_isFadingOut ? "fade-out" : "")">
     <div class="lock-container">
         <MudStack AlignItems="AlignItems.Center" Spacing="6">
             <div class="lock-header">
@@ -14,40 +13,34 @@
             <div class="pin-display">
                 @foreach (var i in Enumerable.Range(0, 4))
                 {
-                    <div class="pin-dot @(pin.Length > i ? "filled" : "")"></div>
+                    <div class="pin-dot @(_pin.Length > i ? "filled" : "")"></div>
                 }
             </div>
 
             <div class="keypad">
-                @foreach (var num in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back" })
+                @foreach (var num in _keypadNumbers)
                 {
-                    @if (num == "")
+                    @if (string.IsNullOrEmpty(num))
                     {
                         <div></div>
                     }
                     else if (num == "back")
                     {
-                        <button class="keypad-btn" @onclick="Backspace">
+                        <button class="keypad-btn" @onclick="HandleBackspace">
                             <MudIcon Icon="@Icons.Material.Filled.Backspace" Size="Size.Small" />
                         </button>
                     }
                     else
                     {
-                        <button class="keypad-btn" @onclick="() => AppendDigit(num)">@num</button>
+                        <button class="keypad-btn" @onclick="() => HandleAppendDigit(num)">@num</button>
                     }
                 }
             </div>
             
-            @if (errorMessage != null)
+            @if (_errorMessage != null)
             {
-                <MudText Color="Color.Error" Typo="Typo.body2" Class="mt-2 shake">@errorMessage</MudText>
+                <MudText Color="Color.Error" Typo="Typo.body2" Class="mt-2 shake">@_errorMessage</MudText>
             }
-
-            <MudButton Variant="Variant.Text" 
-                       Style="text-transform: none; font-size: 0.8rem; margin-top: 2rem; color: #666;"
-                       OnClick="EmergencyReset">
-                Emergency Reset (Temporary)
-            </MudButton>
         </MudStack>
     </div>
 </div>
@@ -178,57 +171,50 @@
 </style>
 
 @code {
-    private string pin = "";
-    private string? errorMessage;
-    private bool IsFadingOut = false;
+    private string _pin = string.Empty;
+    private string? _errorMessage;
+    private bool _isFadingOut;
+    private readonly string[] _keypadNumbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
 
     [Parameter] public EventCallback OnUnlocked { get; set; }
 
-    private async Task AppendDigit(string digit)
+    private async Task HandleAppendDigit(string digit)
     {
-        if (pin.Length < 4)
+        if (_pin.Length < 4)
         {
-            pin += digit;
-            errorMessage = null;
+            _pin += digit;
+            _errorMessage = null;
 
-            if (pin.Length == 4)
+            if (_pin.Length == 4)
             {
-                await Task.Delay(200); // Small pause for visual feedback
-                await Verify();
+                await Task.Delay(200);
+                await VerifyPinAsync();
             }
         }
     }
 
-    private void Backspace()
+    private void HandleBackspace()
     {
-        if (pin.Length > 0)
+        if (_pin.Length > 0)
         {
-            pin = pin[..^1];
-            errorMessage = null;
+            _pin = _pin[..^1];
+            _errorMessage = null;
         }
     }
 
-    private async Task Verify()
+    private async Task VerifyPinAsync()
     {
-        var success = await Security.VerifyPinAsync(pin);
+        var success = await Security.VerifyPinAsync(_pin);
         if (success)
         {
-            IsFadingOut = true;
-            await Task.Delay(400); // Wait for animation
+            _isFadingOut = true;
+            await Task.Delay(400);
             await OnUnlocked.InvokeAsync();
         }
         else
         {
-            pin = "";
-            errorMessage = "Incorrect PIN. Try again.";
-            StateHasChanged();
+            _pin = string.Empty;
+            _errorMessage = "Incorrect PIN. Try again.";
         }
-    }
-
-    private async Task EmergencyReset()
-    {
-        await Security.SetPinAsync("");
-        await OnUnlocked.InvokeAsync();
-        Snackbar.Add("PIN has been cleared. Please set a 4-digit PIN in settings.", Severity.Warning);
     }
 }

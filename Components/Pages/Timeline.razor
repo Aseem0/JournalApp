@@ -1,11 +1,9 @@
 ﻿@page "/timeline"
-@using JournalApp.Models
-@using JournalApp.Services
+@using System.Text.RegularExpressions
 @inject DatabaseService Db
 @inject NavigationManager Nav
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
-    <!-- Header -->
     <div class="mb-6">
         <MudText Typo="Typo.h4" Style="font-weight: 600;">Timeline</MudText>
         <MudText Typo="Typo.body1">Browse all your journal entries</MudText>
@@ -13,7 +11,7 @@
 
     <!-- Search Bar and Filters -->
     <MudStack Row="true" Spacing="3" Class="mb-6">
-        <MudTextField @bind-Value="searchQuery"
+        <MudTextField @bind-Value="_searchQuery"
                      Placeholder="Search entries by title or content..."
                      Variant="Variant.Outlined"
                      Adornment="Adornment.Start"
@@ -21,23 +19,18 @@
                      FullWidth="true"
                      Immediate="true"
                      Style="border-radius: 12px;"
-                     @bind-Value:after="FilterEntries" />
+                     @bind-Value:after="HandleFilterEntries" />
         
         <MudButton Variant="Variant.Outlined"
-           StartIcon="@Icons.Material.Filled.FilterList"
-           OnClick="OpenFilterDialog"
-           Style="border-radius: 12px;
-                  min-width: 120px;
-                  background-color: #fff;
-                  color: black;
-                  border-color: #fff;
-                  text-transform: none;">
+                   StartIcon="@Icons.Material.Filled.FilterList"
+                   OnClick="HandleOpenFilterDialog"
+                   Style="border-radius: 12px; min-width: 120px; background-color: #fff; color: black; border-color: #fff; text-transform: none;">
             Filters
         </MudButton>
     </MudStack>
 
     <!-- Journal Entries List -->
-    @if (Entries == null || FilteredEntries.Count == 0)
+    @if (_entries == null || _filteredEntries.Count == 0)
     {
         <MudPaper Elevation="0" Class="pa-8 text-center" Style="border-radius: 16px; border: 1px solid #444;">
             <MudText Typo="Typo.body1">No entries yet.</MudText>
@@ -46,11 +39,10 @@
     else
     {
         <MudStack Spacing="4">
-            @foreach (var entry in PagedEntries)
+            @foreach (var entry in _pagedEntries)
             {
-                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444; cursor: pointer;" @onclick="() => EditEntry(entry.Id)">
+                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444; cursor: pointer;" @onclick="() => HandleEditEntry(entry.Id)">
                     <MudStack Spacing="3">
-                        <!-- Date and Mood Badge -->
                         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
                             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
@@ -59,31 +51,27 @@
                                 </MudText>
                             </MudStack>
                             
-                                <MudChip T="string" Text="@entry.PrimaryMood"
+                            <MudChip T="string" Text="@entry.PrimaryMood"
                                     Size="Size.Small"
                                     Style="@GetMoodChipStyle(entry.PrimaryMood)" />
                         </MudStack>
 
-                        <!-- Entry Content Preview -->
                         <MudText Typo="Typo.body1" Style="line-height: 1.6;">
                             @GetPreviewText(entry.Content)
                         </MudText>
 
-                        <!-- Tags -->
-                        @if (entry.TagList?.Any() == true)
+                        @if (entry.TagList.Any())
                         {
                             <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
                                 @foreach (var tag in entry.TagList)
                                 {
                                     <MudChip T="string" Text="@tag"
-                                    Size="Size.Small"
-                                    Variant="Variant.Outlined"
-                                    Style="border-radius: 8px;" />
+                                            Size="Size.Small"
+                                            Variant="Variant.Outlined"
+                                            Style="border-radius: 8px;" />
                                 }
                             </MudStack>
                         }
-
-
                     </MudStack>
                 </MudPaper>
             }
@@ -92,114 +80,113 @@
         <!-- Pagination Controls -->
         <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center" Class="mt-6">
             <MudButton Variant="Variant.Outlined" 
-                       Disabled="@(currentPage == 1)" 
-                       OnClick="PreviousPage"
+                       Disabled="@(_currentPage == 1)" 
+                       OnClick="HandlePreviousPage"
                        StartIcon="@Icons.Material.Filled.ChevronLeft"
                        Style="border-radius: 8px;">
                 Previous
             </MudButton>
-            <MudText Typo="Typo.body2">Page @currentPage of @Math.Max(1, totalPages)</MudText>
+            <MudText Typo="Typo.body2">Page @_currentPage of @Math.Max(1, _totalPages)</MudText>
             <MudButton Variant="Variant.Outlined" 
-                       Disabled="@(currentPage >= totalPages)" 
-                       OnClick="NextPage"
+                       Disabled="@(_currentPage >= _totalPages)" 
+                       OnClick="HandleNextPage"
                        EndIcon="@Icons.Material.Filled.ChevronRight"
                        Style="border-radius: 8px;">
                 Next
             </MudButton>
         </MudStack>
     }
-    </MudContainer>
+</MudContainer>
 
-    <!-- Filter Dialog -->
-    <MudDialog @bind-Visible="isFilterDialogVisible" Options="dialogOptions">
-        <TitleContent>
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                <MudText Typo="Typo.h6">Filter Entries</MudText>
-                <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="CloseFilterDialog" />
-            </MudStack>
-        </TitleContent>
-        <DialogContent>
-            <MudStack Spacing="4">
-                <!-- Moods -->
-                <div>
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">Moods</MudText>
+<!-- Filter Dialog -->
+<MudDialog @bind-Visible="_isFilterDialogVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">Filter Entries</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="HandleCloseFilterDialog" />
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Moods</MudText>
+                <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
+                    @foreach (var mood in _availableMoods)
+                    {
+                        <MudChip T="string" Text="@mood"
+                                Variant="@(_selectedMoods.Contains(mood) ? Variant.Filled : Variant.Outlined)"
+                                Color="@(_selectedMoods.Contains(mood) ? Color.Primary : Color.Default)"
+                                OnClick="() => ToggleMood(mood)"
+                                Style="@(_selectedMoods.Contains(mood) ? "background-color: #0a0a0a; color: white;" : "")" />
+                    }
+                </MudStack>
+            </div>
+
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Tags</MudText>
+                @if (_availableTags.Any())
+                {
                     <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
-                        @foreach (var mood in availableMoods)
+                        @foreach (var tag in _availableTags)
                         {
-                            <MudChip T="string" Text="@mood"
-                                    Variant="@(selectedMoods.Contains(mood) ? Variant.Filled : Variant.Outlined)"
-                                    Color="@(selectedMoods.Contains(mood) ? Color.Primary : Color.Default)"
-                                    OnClick="() => ToggleMood(mood)"
-                                    Style="@(selectedMoods.Contains(mood) ? "background-color: #0a0a0a; color: white;" : "")" />
+                            <MudChip T="string" Text="@tag"
+                                    Variant="@(_selectedTags.Contains(tag) ? Variant.Filled : Variant.Outlined)"
+                                    Color="@(_selectedTags.Contains(tag) ? Color.Primary : Color.Default)"
+                                    OnClick="() => ToggleTag(tag)"
+                                    Style="@(_selectedTags.Contains(tag) ? "background-color: #0a0a0a; color: white;" : "")" />
                         }
                     </MudStack>
-                </div>
-
-                <!-- Tags -->
-                <div>
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">Tags</MudText>
-                    @if (availableTags.Any())
-                    {
-                        <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
-                            @foreach (var tag in availableTags)
-                            {
-                                <MudChip T="string" Text="@tag"
-                                        Variant="@(selectedTags.Contains(tag) ? Variant.Filled : Variant.Outlined)"
-                                        Color="@(selectedTags.Contains(tag) ? Color.Primary : Color.Default)"
-                                        OnClick="() => ToggleTag(tag)"
-                                        Style="@(selectedTags.Contains(tag) ? "background-color: #0a0a0a; color: white;" : "")" />
-                            }
-                        </MudStack>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Style="color: #999;">No tags found.</MudText>
-                    }
-                </div>
-            </MudStack>
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="ClearFilters" Color="Color.Error">Clear All</MudButton>
-            <MudButton OnClick="ApplyFilters" Color="Color.Primary" Variant="Variant.Filled">Apply Filters</MudButton>
-        </DialogActions>
-    </MudDialog>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Style="color: #999;">No tags found.</MudText>
+                }
+            </div>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="HandleClearFilters" Color="Color.Error">Clear All</MudButton>
+        <MudButton OnClick="HandleApplyFilters" Color="Color.Primary" Variant="Variant.Filled">Apply Filters</MudButton>
+    </DialogActions>
+</MudDialog>
 
 @code {
-    List<JournalItem>? Entries;
-    List<JournalItem> FilteredEntries = new();
-    List<JournalItem> PagedEntries = new();
-    string searchQuery = "";
+    // --- Data State ---
+    private List<JournalItem>? _entries;
+    private List<JournalItem> _filteredEntries = [];
+    private List<JournalItem> _pagedEntries = [];
+    private string _searchQuery = string.Empty;
 
-    // Pagination State
-    int currentPage = 1;
-    int pageSize = 4;
-    int totalPages = 1;
+    // --- Pagination State ---
+    private int _currentPage = 1;
+    private const int PageSize = 4;
+    private int _totalPages = 1;
 
-    // Filter State
-    bool isFilterDialogVisible;
-    HashSet<string> selectedMoods = new();
-    HashSet<string> selectedTags = new();
-    List<string> availableTags = new();
-    List<string> availableMoods = new() 
-    { 
+    // --- Filter State ---
+    private bool _isFilterDialogVisible;
+    private readonly HashSet<string> _selectedMoods = [];
+    private readonly HashSet<string> _selectedTags = [];
+    private List<string> _availableTags = [];
+    private readonly List<string> _availableMoods = 
+    [ 
         "Happy", "Excited", "Grateful", "Peaceful", "Proud", "Hopeful",
         "Calm", "Thoughtful", "Curious", "Neutral", "Content",
         "Sad", "Anxious", "Angry", "Frustrated", "Tired", "Lonely" 
-    };
+    ];
     
-    DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+    private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        Entries = Db.GetEntries();
-        FilteredEntries = Entries ?? new List<JournalItem>();
-        FilterEntries(); // Initial filter/pagination logic
+        // Load all entries once and then filter in-memory for speed
+        _entries = (await Db.GetAllEntriesAsync()).ToList();
+        _filteredEntries = _entries;
+        HandleFilterEntries();
         
-        // Extract all unique tags
-        if (Entries != null)
+        // Extract all unique tags ever used for the filter list
+        if (_entries != null)
         {
-            availableTags = Entries
-                .Where(e => e.TagList != null)
+            _availableTags = _entries
                 .SelectMany(e => e.TagList)
                 .Distinct()
                 .OrderBy(t => t)
@@ -207,114 +194,115 @@
         }
     }
 
-    void FilterEntries()
+    /// <summary>
+    /// Filters the loaded entries based on search query, selected moods, and selected tags.
+    /// </summary>
+    private void HandleFilterEntries()
     {
-        if (Entries == null) return;
+        if (_entries == null) return;
 
-        var query = Entries.AsEnumerable();
+        var query = _entries.AsEnumerable();
 
-        // 1. Filter by Search Query (Content only)
-        if (!string.IsNullOrWhiteSpace(searchQuery))
+        // Filter by search text (stripping HTML first)
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
         {
-            query = query.Where(entry =>
-            {
-                var plainContent = System.Text.RegularExpressions.Regex.Replace(entry.Content ?? "", "<.*?>", string.Empty, System.Text.RegularExpressions.RegexOptions.Singleline);
-                return plainContent.Contains(searchQuery, StringComparison.OrdinalIgnoreCase);
-            });
+            query = query.Where(e => Regex.Replace(e.Content, "<.*?>", string.Empty)
+                                          .Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
         }
 
-        // 2. Filter by Moods
-        if (selectedMoods.Any())
+        // Filter by any of the selected moods
+        if (_selectedMoods.Any())
         {
-            query = query.Where(entry => !string.IsNullOrEmpty(entry.PrimaryMood) && selectedMoods.Contains(entry.PrimaryMood));
+            query = query.Where(e => !string.IsNullOrEmpty(e.PrimaryMood) && _selectedMoods.Contains(e.PrimaryMood));
         }
 
-        // 3. Filter by Tags
-        if (selectedTags.Any())
+        // Filter by any of the selected tags
+        if (_selectedTags.Any())
         {
-            query = query.Where(entry => entry.TagList != null && entry.TagList.Any(t => selectedTags.Contains(t)));
+            query = query.Where(e => e.TagList.Any(t => _selectedTags.Contains(t)));
         }
 
-        FilteredEntries = query.ToList();
-        
-        // Reset Pagination
-        currentPage = 1;
+        _filteredEntries = query.ToList();
+        _currentPage = 1; // Reset to first page after filtering
         UpdatePagination();
     }
 
-    void UpdatePagination()
+    /// <summary>
+    /// Slices the filtered list into the current page for display.
+    /// </summary>
+    private void UpdatePagination()
     {
-        if (FilteredEntries.Count == 0)
+        if (_filteredEntries.Count == 0)
         {
-            totalPages = 1;
-            PagedEntries.Clear();
+            _totalPages = 1;
+            _pagedEntries.Clear();
         }
         else
         {
-            totalPages = (int)Math.Ceiling((double)FilteredEntries.Count / pageSize);
-            PagedEntries = FilteredEntries.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
+            _totalPages = (int)Math.Ceiling((double)_filteredEntries.Count / PageSize);
+            _pagedEntries = _filteredEntries.Skip((_currentPage - 1) * PageSize).Take(PageSize).ToList();
         }
     }
 
-    void PreviousPage()
+    // --- Page Navigation Handlers ---
+    private void HandlePreviousPage()
     {
-        if (currentPage > 1)
+        if (_currentPage > 1)
         {
-            currentPage--;
+            _currentPage--;
             UpdatePagination();
         }
     }
 
-    void NextPage()
+    private void HandleNextPage()
     {
-        if (currentPage < totalPages)
+        if (_currentPage < _totalPages)
         {
-            currentPage++;
+            _currentPage++;
             UpdatePagination();
         }
     }
 
-    // Filter Dialog Methods
-    void OpenFilterDialog() => isFilterDialogVisible = true;
-    void CloseFilterDialog() => isFilterDialogVisible = false;
+    // --- Filter Interaction Handlers ---
+    private void HandleOpenFilterDialog() => _isFilterDialogVisible = true;
+    private void HandleCloseFilterDialog() => _isFilterDialogVisible = false;
     
-    void ToggleMood(string mood)
+    private void ToggleMood(string mood)
     {
-        if (selectedMoods.Contains(mood)) selectedMoods.Remove(mood);
-        else selectedMoods.Add(mood);
+        if (!_selectedMoods.Remove(mood)) _selectedMoods.Add(mood);
     }
     
-    void ToggleTag(string tag)
+    private void ToggleTag(string tag)
     {
-        if (selectedTags.Contains(tag)) selectedTags.Remove(tag);
-        else selectedTags.Add(tag);
+        if (!_selectedTags.Remove(tag)) _selectedTags.Add(tag);
     }
 
-    void ClearFilters()
+    private void HandleClearFilters()
     {
-        selectedMoods.Clear();
-        selectedTags.Clear();
-        FilterEntries();
-        // Keep dialog open or close? User usually expects clear to just clear selection.
+        _selectedMoods.Clear();
+        _selectedTags.Clear();
+        HandleFilterEntries();
     }
 
-    void ApplyFilters()
+    private void HandleApplyFilters()
     {
-        FilterEntries();
-        CloseFilterDialog();
+        HandleFilterEntries();
+        HandleCloseFilterDialog();
     }
 
-    string GetPreviewText(string content)
+    /// <summary>
+    /// Generates a plain-text snippet of the content for the timeline list.
+    /// </summary>
+    private static string GetPreviewText(string content)
     {
-        if (string.IsNullOrEmpty(content)) return "";
-        var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", string.Empty);
+        if (string.IsNullOrEmpty(content)) return string.Empty;
+        var plainText = Regex.Replace(content, "<.*?>", string.Empty);
         return plainText.Length > 200 ? plainText.Substring(0, 200) + "..." : plainText;
     }
 
-    string GetMoodChipStyle(string mood)
+    private static string GetMoodChipStyle(string mood)
     {
         var baseStyle = "border-radius: 8px; font-weight: 500;";
-        
         return mood.ToLower() switch
         {
             "calm" or "happy" or "excited" or "positive" => baseStyle + " background-color: #d1fae5; color: #065f46;",
@@ -324,8 +312,5 @@
         };
     }
 
-    void EditEntry(int id)
-    {
-        Nav.NavigateTo($"/entry/{id}");
-    }
+    private void HandleEditEntry(int id) => Nav.NavigateTo($"/entry/{id}");
 }

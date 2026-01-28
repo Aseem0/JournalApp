@@ -1,30 +1,27 @@
 ﻿@page "/analytics"
-@using JournalApp.Services
-@using JournalApp.Models
+@using System.Text.RegularExpressions
 @inject DatabaseService Db
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
-    <!-- Header -->
     <div class="mb-6">
         <MudText Typo="Typo.h4" Style="font-weight: 600;">Analytics</MudText>
         <MudText Typo="Typo.body1">Insights into your journaling patterns</MudText>
     </div>
 
-    <!-- Mood Distribution Chart -->
     <MudPaper Elevation="0" Class="pa-6 mb-6" Style="border-radius: 16px; border: 1px solid #444;">
         <MudText Typo="Typo.h6" Class="mb-6" Style="font-weight: 600;">
             Mood Distribution
         </MudText>
 
         <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
-            @if (moodData.Any())
+            @if (_moodData.Any())
             {
                 <MudChart ChartType="ChartType.Pie"
-                         InputData="@moodData.Select(x => (double)x.Value).ToArray()"
-                         InputLabels="@moodData.Select(x => $"{x.Key}: {x.Percentage}%").ToArray()"
-                         Width="400px"
-                         Height="400px"
-                         ChartOptions="@(new ChartOptions { ChartPalette = moodColors })" />
+                          InputData="@_moodData.Select(x => (double)x.Value).ToArray()"
+                          InputLabels="@_moodData.Select(x => $"{x.Key}: {x.Percentage}%").ToArray()"
+                          Width="400px"
+                          Height="400px"
+                          ChartOptions="@(new ChartOptions { ChartPalette = _moodColors })" />
             }
             else
             {
@@ -33,26 +30,29 @@
         </div>
     </MudPaper>
 
-    <!-- Most Used Tags and Word Count Trend -->
     <MudGrid Spacing="4" Class="mb-6">
-        <!-- Most Used Tags -->
         <MudItem xs="12" md="6">
             <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444; min-height: 450px;">
                 <MudText Typo="Typo.h6" Class="mb-6" Style="font-weight: 600;">
                     Most Used Tags
                 </MudText>
 
-                @if (tagData.Any())
+                @if (_tagData.Any())
                 {
-                    <MudChart ChartType="ChartType.Bar"
-                             InputData="@tagData.Select(x => (double)x.Count).ToArray()"
-                             XAxisLabels="@tagData.Select(x => x.Tag).ToArray()"
-                             Width="100%"
-                             Height="350px"
-                             ChartOptions="@(new ChartOptions { 
-                                 YAxisTicks = 1,
-                                 ChartPalette = new[] { "#3b82f6" }
-                             })" />
+                    <div class="custom-tags-chart">
+                        @foreach (var tag in _tagData)
+                        {
+                            <div class="tag-bar-item">
+                                <div class="tag-bar-outer">
+                                    <div class="tag-bar-inner" 
+                                         style="height: @(GetBarHeight(tag.Count))%;">
+                                        <span class="tag-count">@tag.Count</span>
+                                    </div>
+                                </div>
+                                <MudText Typo="Typo.caption" Class="tag-label mt-2">@tag.Tag</MudText>
+                            </div>
+                        }
+                    </div>
                 }
                 else
                 {
@@ -63,24 +63,23 @@
             </MudPaper>
         </MudItem>
 
-        <!-- Word Count Trend -->
         <MudItem xs="12" md="6">
             <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444; min-height: 450px;">
                 <MudText Typo="Typo.h6" Class="mb-6" Style="font-weight: 600;">
                     Word Count Trend
                 </MudText>
 
-                @if (wordCountData.Any())
+                @if (_wordCountData.Any())
                 {
                     <MudChart ChartType="ChartType.Line"
-                             ChartSeries="@wordCountSeries"
-                             XAxisLabels="@wordCountData.Select(x => x.Date.ToString("MM/dd")).ToArray()"
+                             ChartSeries="@_wordCountSeries"
+                             XAxisLabels="@_wordCountData.Select(x => x.Date.ToString("MM/dd")).ToArray()"
                              Width="100%"
                              Height="350px"
                              ChartOptions="@(new ChartOptions { 
                                  YAxisTicks = 50,
                                  LineStrokeWidth = 3,
-                                 ChartPalette = new[] { "#a855f7" }
+                                 ChartPalette = ["#a855f7"]
                              })" />
                 }
                 else
@@ -93,184 +92,180 @@
         </MudItem>
     </MudGrid>
 
-    <!-- Summary Stats Cards -->
     <MudGrid Spacing="4">
-        <!-- Most Frequent Mood -->
         <MudItem xs="12" md="4">
             <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
                 <MudText Typo="Typo.body2" Class="mb-2">Most Frequent Mood</MudText>
-                <MudText Typo="Typo.h5" Style="font-weight: 600;">@mostFrequentMood</MudText>
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">@_mostFrequentMood</MudText>
             </MudPaper>
         </MudItem>
 
-        <!-- Most Used Tag -->
         <MudItem xs="12" md="4">
             <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
                 <MudText Typo="Typo.body2" Class="mb-2">Most Used Tag</MudText>
-                <MudText Typo="Typo.h5" Style="font-weight: 600;">@mostUsedTag</MudText>
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">@_mostUsedTag</MudText>
             </MudPaper>
         </MudItem>
 
-        <!-- Average Word Count -->
         <MudItem xs="12" md="4">
             <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; border: 1px solid #444;">
                 <MudText Typo="Typo.body2" Class="mb-2">Average Word Count</MudText>
-                <MudText Typo="Typo.h5" Style="font-weight: 600;">@averageWordCount</MudText>
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">@_averageWordCount</MudText>
             </MudPaper>
         </MudItem>
     </MudGrid>
 </MudContainer>
 
 @code {
-    private List<MoodData> moodData = new();
-    private List<TagData> tagData = new();
-    private List<WordCountData> wordCountData = new();
-    private List<ChartSeries> wordCountSeries = new();
-    private string[] moodColors = new string[0];
+    // --- Chart Data States ---
+    private List<MoodStats> _moodData = [];
+    private List<TagStats> _tagData = [];
+    private List<WordCountStats> _wordCountData = [];
+    private List<ChartSeries> _wordCountSeries = [];
+    private string[] _moodColors = [];
 
-    private string mostFrequentMood = "N/A";
-    private string mostUsedTag = "N/A";
-    private int averageWordCount = 0;
+    // --- Summary State ---
+    private string _mostFrequentMood = "N/A";
+    private string _mostUsedTag = "N/A";
+    private int _averageWordCount;
+    private int _maxTagCount = 1;
 
-    public class MoodData
+    // --- Data Transfer Records ---
+    public record MoodStats(string Key, int Value, int Percentage);
+    public record TagStats(string Tag, int Count);
+    public record WordCountStats(DateTime Date, int WordCount);
+
+    protected override async Task OnInitializedAsync()
     {
-        public string Key { get; set; } = "";
-        public int Value { get; set; }
-        public int Percentage { get; set; }
+        await LoadAnalyticsDataAsync();
     }
 
-    public class TagData
+    /// <summary>
+    /// Aggregates all journaling data and computes metrics for visualization.
+    /// </summary>
+    private async Task LoadAnalyticsDataAsync()
     {
-        public string Tag { get; set; } = "";
-        public int Count { get; set; }
-    }
-
-    public class WordCountData
-    {
-        public DateTime Date { get; set; }
-        public int WordCount { get; set; }
-    }
-
-    protected override void OnInitialized()
-    {
-        LoadAnalyticsData();
-    }
-
-    private void LoadAnalyticsData()
-    {
-        var entries = Db.GetEntries();
+        var entries = (await Db.GetAllEntriesAsync()).ToList();
 
         if (entries.Any())
         {
-            // Calculate mood distribution
             CalculateMoodDistribution(entries);
-
-            // Calculate most used tags
             CalculateTagUsage(entries);
-
-            // Calculate word count trend
             CalculateWordCountTrend(entries);
-
-            // Calculate summary stats
             CalculateSummaryStats(entries);
         }
     }
 
+    /// <summary>
+    /// Groups entries into Positive, Neutral, and Negative categories based on moods.
+    /// </summary>
     private void CalculateMoodDistribution(List<JournalItem> entries)
-    {
-        var moodGroups = entries.GroupBy(e => e.PrimaryMood)
-                               .Select(g => new { Mood = g.Key, Count = g.Count() })
-                               .OrderByDescending(x => x.Count)
-                               .ToList();
-
-        var total = entries.Count;
-        moodData = moodGroups.Select(m => new MoodData
-        {
-            Key = m.Mood,
-            Value = m.Count,
-            Percentage = (int)Math.Round((double)m.Count / total * 100)
-        }).ToList();
-
-        // Define colors for each mood
-        moodColors = moodData.Select(m => GetMoodColor(m.Key)).ToArray();
-    }
-
-    private string GetMoodColor(string mood)
     {
         var positiveMoods = new[] { "Happy", "Excited", "Grateful", "Peaceful", "Proud", "Hopeful" };
         var neutralMoods = new[] { "Calm", "Thoughtful", "Curious", "Neutral", "Content" };
+        var negativeMoods = new[] { "Sad", "Anxious", "Angry", "Frustrated", "Tired", "Lonely" };
 
-        if (positiveMoods.Contains(mood))
-            return "#10b981"; // Green
-        else if (neutralMoods.Contains(mood))
-            return "#fbbf24"; // Yellow/Gold
-        else if (mood == "Anxious")
-            return "#f59e0b"; // Orange
-        else if (mood == "Excited")
-            return "#ef4444"; // Red
-        else if (mood == "Peaceful")
-            return "#3b82f6"; // Blue
-        else if (mood == "Grateful")
-            return "#a855f7"; // Purple
-        else
-            return "#6b7280"; // Gray
+        var categorizedGroups = entries.GroupBy(e => {
+            if (positiveMoods.Contains(e.PrimaryMood)) return "Positive";
+            if (neutralMoods.Contains(e.PrimaryMood)) return "Neutral";
+            if (negativeMoods.Contains(e.PrimaryMood)) return "Negative";
+            return "Other";
+        })
+        .Select(g => new { Category = g.Key, Count = g.Count() })
+        .OrderByDescending(x => x.Count)
+        .ToList();
+
+        var total = entries.Count;
+        _moodData = categorizedGroups.Select(m => new MoodStats(
+            m.Category,
+            m.Count,
+            (int)Math.Round((double)m.Count / total * 100)
+        )).ToList();
+
+        _moodColors = _moodData.Select(m => GetMoodColor(m.Key)).ToArray();
     }
 
+    private static string GetMoodColor(string category) => category switch
+    {
+        "Positive" => "#10b981",
+        "Neutral" => "#fbbf24",
+        "Negative" => "#ef4444",
+        _ => "#6b7280"
+    };
+
+    /// <summary>
+    /// Identifies the most frequently used tags for the bar chart.
+    /// </summary>
     private void CalculateTagUsage(List<JournalItem> entries)
     {
         var allTags = entries.SelectMany(e => e.TagList).ToList();
-        tagData = allTags.GroupBy(t => t)
-                        .Select(g => new TagData { Tag = g.Key, Count = g.Count() })
-                        .OrderByDescending(t => t.Count)
-                        .Take(6)
-                        .ToList();
+        _tagData = allTags.GroupBy(t => t)
+                          .Select(g => new TagStats(g.Key, g.Count()))
+                          .OrderByDescending(t => t.Count)
+                          .Take(6)
+                          .ToList();
+
+        if (_tagData.Any())
+        {
+            _maxTagCount = _tagData.Max(x => x.Count);
+            if (_maxTagCount == 0) _maxTagCount = 1;
+        }
     }
 
+    /// <summary>
+    /// Maps word counts over time for the line chart trend.
+    /// </summary>
     private void CalculateWordCountTrend(List<JournalItem> entries)
     {
-        wordCountData = entries.OrderBy(e => e.EntryDate)
-                              .Select(e => new WordCountData
-                              {
-                                  Date = e.EntryDate,
-                                  WordCount = CountWords(e.Content)
-                              })
-                              .ToList();
+        _wordCountData = entries.OrderBy(e => e.EntryDate)
+                               .Select(e => new WordCountStats(
+                                   e.EntryDate,
+                                   CountWords(e.Content)
+                               ))
+                               .ToList();
 
-        wordCountSeries = new List<ChartSeries>
-        {
+        _wordCountSeries = [
             new ChartSeries
             {
                 Name = "Word Count",
-                Data = wordCountData.Select(x => (double)x.WordCount).ToArray()
+                Data = _wordCountData.Select(x => (double)x.WordCount).ToArray()
             }
-        };
+        ];
     }
 
-    private int CountWords(string text)
+    /// <summary>
+    /// Utility to calculate word count for a single HTML content string.
+    /// </summary>
+    private static int CountWords(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
-            return 0;
-
-        return text.Split(new[] { ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+        return Regex.Replace(text, "<.*?>", string.Empty)
+                    .Split([' ', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
+                    .Length;
     }
 
+    /// <summary>
+    /// Computes high-level summary metrics.
+    /// </summary>
     private void CalculateSummaryStats(List<JournalItem> entries)
     {
-        // Most frequent mood
         var moodGroup = entries.GroupBy(e => e.PrimaryMood)
-                              .OrderByDescending(g => g.Count())
-                              .FirstOrDefault();
-        mostFrequentMood = moodGroup?.Key ?? "N/A";
+                               .OrderByDescending(g => g.Count())
+                               .FirstOrDefault();
+        _mostFrequentMood = moodGroup?.Key ?? "N/A";
 
-        // Most used tag
         var allTags = entries.SelectMany(e => e.TagList).ToList();
         var tagGroup = allTags.GroupBy(t => t)
                              .OrderByDescending(g => g.Count())
                              .FirstOrDefault();
-        mostUsedTag = tagGroup?.Key ?? "N/A";
+        _mostUsedTag = tagGroup?.Key ?? "N/A";
 
-        // Average word count
         var totalWords = entries.Sum(e => CountWords(e.Content));
-        averageWordCount = entries.Any() ? totalWords / entries.Count : 0;
+        _averageWordCount = entries.Any() ? totalWords / entries.Count : 0;
     }
+
+    /// <summary>
+    /// Calculates responsive height for the custom CSS bar chart.
+    /// </summary>
+    private int GetBarHeight(int count) => (int)Math.Max(10, (double)count / _maxTagCount * 100);
 }

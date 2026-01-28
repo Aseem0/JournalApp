@@ -1,9 +1,9 @@
 ﻿@inherits LayoutComponentBase
-@inject JournalApp.Services.ThemeService ThemeService
+@inject ThemeService Theme
 @inject JournalApp.Services.SecurityService Security
 @implements IDisposable
 
-<MudThemeProvider Theme="_theme" IsDarkMode="@ThemeService.IsDarkMode" />
+<MudThemeProvider Theme="_theme" IsDarkMode="@Theme.IsDarkMode" />
 <MudPopoverProvider />
 @* Needed for dialogs *@
 <MudDialogProvider />
@@ -47,7 +47,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ThemeService.OnThemeChanged += StateHasChanged;
+        Theme.ThemeChanged += StateHasChanged;
         
         var hasPin = await Security.IsPinSetAsync();
         IsLocked = hasPin && !Security.IsAuthenticated;
@@ -61,7 +61,7 @@
 
     public void Dispose()
     {
-        ThemeService.OnThemeChanged -= StateHasChanged;
+        Theme.ThemeChanged -= StateHasChanged;
     }
 }
 

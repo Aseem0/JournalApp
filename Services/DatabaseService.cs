@@ -1,33 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using JournalApp.Models;
 
-namespace JournalApp.Services
+namespace JournalApp.Services;
+
+/// <summary>
+/// Service responsible for all database operations, managing journal entries in a SQLite database.
+/// </summary>
+public class DatabaseService
 {
-    public class DatabaseService
+    private readonly string _dbPath;
+
+    public DatabaseService()
     {
-        private readonly string _dbPath;
+        var folder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        _dbPath = Path.Combine(folder, "journal.db");
 
-        public DatabaseService()
-        {
-            var folder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            _dbPath = System.IO.Path.Combine(folder, "journal.db");
+        InitializeDatabase();
+    }
 
-            InitializeDatabase();
-        }
+    /// <summary>
+    /// Initializes the SQLite database and creates the necessary tables if they don't exist.
+    /// </summary>
+    private void InitializeDatabase()
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        connection.Open();
 
-        private void InitializeDatabase()
-        {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText =
-            @"
+        var command = connection.CreateCommand();
+        command.CommandText = @"
             CREATE TABLE IF NOT EXISTS JournalItems (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 EntryDate TEXT NOT NULL,
@@ -36,172 +36,166 @@ namespace JournalApp.Services
                 SecondaryMoods TEXT,
                 Tags TEXT,
                 CreatedAt TEXT NOT NULL
-            );
-            ";
+            );";
 
-            cmd.ExecuteNonQuery();
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Saves a new journal entry to the database.
+    /// </summary>
+    /// <param name="entry">The entry to save.</param>
+    public async Task SaveEntryAsync(JournalItem entry)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = @"
+            INSERT INTO JournalItems (EntryDate, Content, PrimaryMood, SecondaryMoods, Tags, CreatedAt)
+            VALUES ($entryDate, $content, $mood, $secondary, $tags, $createdAt);";
+
+        // Map parameters for safety against injection
+        command.Parameters.AddWithValue("$entryDate", entry.EntryDate.ToString("yyyy-MM-dd"));
+        command.Parameters.AddWithValue("$content", entry.Content);
+        command.Parameters.AddWithValue("$mood", entry.PrimaryMood ?? string.Empty);
+        command.Parameters.AddWithValue("$secondary", entry.SecondaryMoods ?? string.Empty);
+        command.Parameters.AddWithValue("$tags", entry.Tags ?? "[]");
+        command.Parameters.AddWithValue("$createdAt", entry.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"));
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Retrieves all journal entries ordered by date (newest first).
+    /// </summary>
+    /// <returns>A collection of all journal entries.</returns>
+    public async Task<IEnumerable<JournalItem>> GetAllEntriesAsync()
+    {
+        var entries = new List<JournalItem>();
+
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM JournalItems ORDER BY EntryDate DESC";
+
+        using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            entries.Add(MapToJournalItem(reader));
         }
 
-        // ================= CREATE =================
-        public void SaveEntry(JournalItem entry)
-        {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
+        return entries;
+    }
 
-            var cmd = connection.CreateCommand();
-            cmd.CommandText =
-            @"
-            INSERT INTO JournalItems
-            (EntryDate, Content, PrimaryMood, SecondaryMoods, Tags, CreatedAt)
-            VALUES ($entryDate, $content, $mood, $secondary, $tags, $createdAt);
-            ";
+    /// <summary>
+    /// Retrieves a specific journal entry by its unique ID.
+    /// </summary>
+    /// <param name="id">The ID of the entry to find.</param>
+    /// <returns>The found entry, or null if not found.</returns>
+    public async Task<JournalItem?> GetEntryByIdAsync(int id)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
 
-            cmd.Parameters.AddWithValue("$entryDate", entry.EntryDate.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("$content", entry.Content);
-            cmd.Parameters.AddWithValue("$mood", entry.PrimaryMood ?? "");
-            cmd.Parameters.AddWithValue("$secondary", entry.SecondaryMoods ?? "");
-            cmd.Parameters.AddWithValue("$tags", entry.Tags ?? "");
-            cmd.Parameters.AddWithValue("$createdAt", entry.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"));
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM JournalItems WHERE Id = $id";
+        command.Parameters.AddWithValue("$id", id);
 
-            cmd.ExecuteNonQuery();
-        }
+        using var reader = await command.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? MapToJournalItem(reader) : null;
+    }
 
-        // ================= READ ALL =================
-        public List<JournalItem> GetEntries()
-        {
-            var list = new List<JournalItem>();
+    /// <summary>
+    /// Retrieves a journal entry for a specific calendar date.
+    /// </summary>
+    /// <param name="date">The date to search for.</param>
+    /// <returns>The entry for that date, or null if none exists.</returns>
+    public async Task<JournalItem?> GetEntryByDateAsync(DateTime date)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
 
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT * FROM JournalItems WHERE EntryDate = $date LIMIT 1";
+        command.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
 
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM JournalItems ORDER BY EntryDate DESC";
+        using var reader = await command.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? MapToJournalItem(reader) : null;
+    }
 
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                list.Add(new JournalItem
-                {
-                    Id = reader.GetInt32(0),
-                    EntryDate = DateTime.Parse(reader.GetString(1)),
-                    Content = reader.GetString(2),
-                    PrimaryMood = reader.GetString(3),
-                    SecondaryMoods = reader.GetString(4),
-                    Tags = reader.GetString(5),
-                    CreatedAt = DateTime.Parse(reader.GetString(6))
-                });
-            }
+    /// <summary>
+    /// Updates an existing journal entry in the database.
+    /// </summary>
+    /// <param name="entry">The entry with updated values.</param>
+    public async Task UpdateEntryAsync(JournalItem entry)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
 
-            return list;
-        }
-
-        // ================= READ BY ID =================
-        public JournalItem? GetEntryById(int id)
-        {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM JournalItems WHERE Id = $id";
-            cmd.Parameters.AddWithValue("$id", id);
-
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
-            {
-                return new JournalItem
-                {
-                    Id = reader.GetInt32(0),
-                    EntryDate = DateTime.Parse(reader.GetString(1)),
-                    Content = reader.GetString(2),
-                    PrimaryMood = reader.GetString(3),
-                    SecondaryMoods = reader.GetString(4),
-                    Tags = reader.GetString(5),
-                    CreatedAt = DateTime.Parse(reader.GetString(6))
-                };
-            }
-
-            return null;
-        }
-
-        // ================= READ BY DATE =================
-        public JournalItem? GetEntryByDate(DateTime date)
-        {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM JournalItems WHERE EntryDate = $date LIMIT 1";
-            cmd.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
-
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
-            {
-                return new JournalItem
-                {
-                    Id = reader.GetInt32(0),
-                    EntryDate = DateTime.Parse(reader.GetString(1)),
-                    Content = reader.GetString(2),
-                    PrimaryMood = reader.GetString(3),
-                    SecondaryMoods = reader.GetString(4),
-                    Tags = reader.GetString(5),
-                    CreatedAt = DateTime.Parse(reader.GetString(6))
-                };
-            }
-
-            return null;
-        }
-
-        // ================= UPDATE =================
-        public void UpdateEntry(JournalItem entry)
-        {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            connection.Open();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText =
-            @"
+        var command = connection.CreateCommand();
+        command.CommandText = @"
             UPDATE JournalItems
             SET Content = $content,
                 PrimaryMood = $mood,
                 SecondaryMoods = $secondary,
                 Tags = $tags
-            WHERE Id = $id;
-            ";
+            WHERE Id = $id;";
 
-            cmd.Parameters.AddWithValue("$content", entry.Content);
-            cmd.Parameters.AddWithValue("$mood", entry.PrimaryMood ?? "");
-            cmd.Parameters.AddWithValue("$secondary", entry.SecondaryMoods ?? "");
-            cmd.Parameters.AddWithValue("$tags", entry.Tags ?? "");
-            cmd.Parameters.AddWithValue("$id", entry.Id);
+        command.Parameters.AddWithValue("$content", entry.Content);
+        command.Parameters.AddWithValue("$mood", entry.PrimaryMood ?? string.Empty);
+        command.Parameters.AddWithValue("$secondary", entry.SecondaryMoods ?? string.Empty);
+        command.Parameters.AddWithValue("$tags", entry.Tags ?? "[]");
+        command.Parameters.AddWithValue("$id", entry.Id);
 
-            cmd.ExecuteNonQuery();
-        }
+        await command.ExecuteNonQueryAsync();
+    }
 
-        // ================= DELETE =================
-        // DELETE
-        public async Task DeleteEntryAsync(int id)
+    /// <summary>
+    /// Deletes a specific journal entry from the database.
+    /// </summary>
+    /// <param name="id">The ID of the entry to delete.</param>
+    public async Task DeleteEntryAsync(int id)
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM JournalItems WHERE Id = $id";
+        command.Parameters.AddWithValue("$id", id);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Permanently deletes all journal entries from the database.
+    /// </summary>
+    public async Task DeleteAllEntriesAsync()
+    {
+        using var connection = new SqliteConnection($"Data Source={_dbPath}");
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM JournalItems";
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Maps a single SQLite database record to a JournalItem model.
+    /// </summary>
+    private static JournalItem MapToJournalItem(SqliteDataReader reader)
+    {
+        return new JournalItem
         {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            await connection.OpenAsync();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "DELETE FROM JournalItems WHERE Id = $id";
-            cmd.Parameters.AddWithValue("$id", id);
-
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        public async Task DeleteAllEntriesAsync()
-        {
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            await connection.OpenAsync();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "DELETE FROM JournalItems";
-
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-
+            Id = reader.GetInt32(0),
+            EntryDate = DateTime.Parse(reader.GetString(1)),
+            Content = reader.GetString(2),
+            PrimaryMood = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+            SecondaryMoods = reader.IsDBNull(4) ? "[]" : reader.GetString(4),
+            Tags = reader.IsDBNull(5) ? "[]" : reader.GetString(5),
+            CreatedAt = DateTime.Parse(reader.GetString(6))
+        };
     }
 }

@@ -3,23 +3,31 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using JournalApp.Models;
 using System.Text.RegularExpressions;
+using System.Net;
 using QuestColors = QuestPDF.Helpers.Colors;
 
 namespace JournalApp.Services;
 
+/// <summary>
+/// Service responsible for generating PDF archives of journal entries.
+/// </summary>
 public class PdfExportService
 {
-    public byte[] GenerateJournalPdf(List<JournalItem> entries)
+    /// <summary>
+    /// Generates a PDF document containing a collection of journal entries.
+    /// </summary>
+    /// <param name="entries">The entries to include in the PDF.</param>
+    /// <returns>A byte array representing the PDF file.</returns>
+    public byte[] GenerateJournalPdf(IEnumerable<JournalItem> entries)
     {
         return Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(1, Unit.Inch);
-                page.PageColor(QuestColors.White);
-                page.DefaultTextStyle(x => x.FontSize(11).FontColor(QuestColors.Black));
-
+                // Basic page configuration
+                ConfigurePage(page);
+                
+                // Header section
                 page.Header().PaddingBottom(10).Row(row =>
                 {
                     row.RelativeItem().Column(col =>
@@ -29,41 +37,24 @@ public class PdfExportService
                     });
                 });
 
+                // Main content: journal entries
                 page.Content().PaddingVertical(10).Column(column =>
                 {
-                    if (!entries.Any())
+                    var journalEntries = entries.OrderByDescending(e => e.EntryDate).ToList();
+
+                    if (!journalEntries.Any())
                     {
                         column.Item().Text("No entries found for the selected range.").Italic();
                         return;
                     }
 
-                    foreach (var entry in entries.OrderByDescending(e => e.EntryDate))
+                    foreach (var entry in journalEntries)
                     {
-                        column.Item().PaddingBottom(15).Column(entryColumn =>
-                        {
-                            // Date and Mood Header
-                            entryColumn.Item().BorderBottom(1).BorderColor(QuestColors.Grey.Lighten2).PaddingBottom(5).Row(row =>
-                            {
-                                row.RelativeItem().Text(entry.EntryDate.ToString("dddd, MMMM dd, yyyy")).SemiBold().FontSize(13);
-                                row.AutoItem().Text(entry.PrimaryMood).Italic().FontColor(QuestColors.Blue.Medium);
-                            });
-
-                            // Tags
-                            if (entry.TagList.Any())
-                            {
-                                entryColumn.Item().PaddingTop(2).Text(t =>
-                                {
-                                    t.Span("Tags: ").Bold().FontSize(9);
-                                    t.Span(string.Join(", ", entry.TagList)).FontSize(9).FontColor(QuestColors.Grey.Darken1);
-                                });
-                            }
-
-                            // Content
-                            entryColumn.Item().PaddingTop(8).Text(StripHtml(entry.Content)).LineHeight(1.5f);
-                        });
+                        RenderEntry(column, entry);
                     }
                 });
 
+                // Footer with page numbering
                 page.Footer().PaddingTop(20).Column(footerCol =>
                 {
                     footerCol.Item().LineHorizontal(0.5f).LineColor(QuestColors.Grey.Lighten1);
@@ -81,16 +72,62 @@ public class PdfExportService
         }).GeneratePdf();
     }
 
-    private string StripHtml(string input)
+    /// <summary>
+    /// Configures global page settings.
+    /// </summary>
+    private static void ConfigurePage(PageDescriptor page)
+    {
+        page.Size(PageSizes.A4);
+        page.Margin(1, Unit.Inch);
+        page.PageColor(QuestColors.White);
+        page.DefaultTextStyle(x => x.FontSize(11).FontColor(QuestColors.Black));
+    }
+
+    /// <summary>
+    /// Renders a single journal entry row in the PDF.
+    /// </summary>
+    private void RenderEntry(ColumnDescriptor column, JournalItem entry)
+    {
+        column.Item().PaddingBottom(15).Column(entryColumn =>
+        {
+            // Date and Mood Row
+            entryColumn.Item().BorderBottom(1).BorderColor(QuestColors.Grey.Lighten2).PaddingBottom(5).Row(row =>
+            {
+                row.RelativeItem().Text(entry.EntryDate.ToString("dddd, MMMM dd, yyyy")).SemiBold().FontSize(13);
+                row.AutoItem().Text(entry.PrimaryMood).Italic().FontColor(QuestColors.Blue.Medium);
+            });
+
+            // Tags section
+            if (entry.TagList.Any())
+            {
+                entryColumn.Item().PaddingTop(2).Text(t =>
+                {
+                    t.Span("Tags: ").Bold().FontSize(9);
+                    t.Span(string.Join(", ", entry.TagList)).FontSize(9).FontColor(QuestColors.Grey.Darken1);
+                });
+            }
+
+            // Sanitized entry content
+            entryColumn.Item().PaddingTop(8).Text(StripHtml(entry.Content)).LineHeight(1.5f);
+        });
+    }
+
+    /// <summary>
+    /// Strips HTML tags from entry content for PDF rendering.
+    /// </summary>
+    private static string StripHtml(string input)
     {
         if (string.IsNullOrEmpty(input)) return string.Empty;
         
-        // Basic conversion for common tags
-        var text = input.Replace("<br>", "\n").Replace("<br/>", "\n").Replace("<p>", "").Replace("</p>", "\n\n");
+        // Manual conversion for common tags to maintain basic formatting
+        var text = input.Replace("<br>", "\n")
+                        .Replace("<br/>", "\n")
+                        .Replace("<p>", string.Empty)
+                        .Replace("</p>", "\n\n");
         
-        // Strip remaining tags
+        // Remove all other HTML tags
         var plainText = Regex.Replace(text, "<.*?>", string.Empty);
         
-        return System.Net.WebUtility.HtmlDecode(plainText).Trim();
+        return WebUtility.HtmlDecode(plainText).Trim();
     }
 }

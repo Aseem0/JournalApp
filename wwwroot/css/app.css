@@ -1,6 +1,4 @@
 ﻿
-
-
 body {
     background-color: #f8f9fa;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -459,6 +457,77 @@ body {
             background-color: #000000;
             border-right: 1px solid #333 !important;
         }
+
+/* Custom Bar Chart for Tags Analytics */
+.custom-tags-chart {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 350px;
+    width: 100%;
+    padding: 0 20px;
+}
+
+.tag-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60px;
+    height: 100%;
+}
+
+.tag-bar-outer {
+    flex-grow: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.tag-bar-inner {
+    width: 100%;
+    background-color: #3b82f6;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    transition: filter 0.2s, transform 0.2s;
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+.tag-bar-inner:hover {
+    filter: brightness(1.1);
+    transform: scaleX(1.05);
+}
+
+.tag-count {
+    position: absolute;
+    top: -25px;
+    background-color: #333;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s, top 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.tag-bar-item:hover .tag-count {
+    opacity: 1;
+    top: -30px;
+}
+
+.tag-label {
+    width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
 
         body.dark .entry-card {
             background-color: #000000;

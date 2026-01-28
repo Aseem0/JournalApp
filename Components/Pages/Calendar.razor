@@ -1,6 +1,4 @@
 ﻿@page "/calendar"
-@using JournalApp.Services
-@using JournalApp.Models
 @inject DatabaseService Db
 @inject NavigationManager Nav
 
@@ -8,15 +6,15 @@
     <!-- Header with Month/Year and Navigation -->
     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-6">
         <MudText Typo="Typo.h4" Style="font-weight: 600;">
-            @currentDate.ToString("MMMM yyyy")
+            @_currentDate.ToString("MMMM yyyy")
         </MudText>
         <MudStack Row="true" Spacing="2">
             <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" 
-                          OnClick="PreviousMonth"
+                          OnClick="HandlePreviousMonth"
                           Style="border: 1px solid #e0e0e0; border-radius: 8px;"
                           Size="Size.Medium" />
             <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" 
-                          OnClick="NextMonth"
+                          OnClick="HandleNextMonth"
                           Style="border: 1px solid #e0e0e0; border-radius: 8px;"
                           Size="Size.Medium" />
         </MudStack>
@@ -24,9 +22,8 @@
 
     <!-- Calendar Grid -->
     <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 16px; border: 1px solid #444;">
-        <!-- Day Headers -->
         <MudGrid Spacing="3" Class="mb-2">
-            @foreach (var day in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+            @foreach (var day in _dayHeaders)
             {
                 <MudItem xs="12" sm="12" md="1" Style="min-width: 140px;">
                     <MudText Typo="Typo.body2" Align="Align.Center" Style="font-weight: 500;">
@@ -36,17 +33,16 @@
             }
         </MudGrid>
 
-        <!-- Calendar Days -->
         <MudGrid Spacing="3">
-            @foreach (var day in GetCalendarDays())
+            @foreach (var day in _calendarDays)
             {
                 <MudItem xs="12" sm="12" md="1" Style="min-width: 140px;">
                     <MudPaper Elevation="0" 
                              Class="pa-4 d-flex flex-column align-center justify-center"
                              Style="@GetDayStyle(day)"
-                             @onclick="() => SelectDay(day)">
+                             @onclick="() => HandleSelectDay(day)">
                         <MudText Typo="Typo.body1" Style="@GetDayTextStyle(day)">
-                            @(day.Day)
+                            @(day.Date.Day)
                         </MudText>
                         @if (day.Mood.HasValue)
                         {
@@ -81,60 +77,64 @@
 </MudContainer>
 
 @code {
-    private DateTime currentDate = new DateTime(2026, 1, 1);
-    private DateTime? selectedDate;
-    private List<CalendarDay> calendarDays = new();
+    // --- Calendar State ---
+    private DateTime _currentDate = new(DateTime.Now.Year, DateTime.Now.Month, 1);
+    private DateTime? _selectedDate;
+    private List<CalendarDay> _calendarDays = [];
+    private readonly string[] _dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    public enum MoodType
-    {
-        Positive,
-        Neutral,
-        Negative
-    }
+    // --- Enums and Models ---
+    public enum MoodType { Positive, Neutral, Negative }
 
     public class CalendarDay
     {
-        public DateTime Date { get; set; }
-        public int Day { get; set; }
-        public bool IsCurrentMonth { get; set; }
+        public DateTime Date { get; init; }
+        public bool IsCurrentMonth { get; init; }
         public bool IsSelected { get; set; }
-        public MoodType? Mood { get; set; }
-        public int? EntryId { get; set; }
+        public MoodType? Mood { get; init; }
+        public int? EntryId { get; init; }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadCalendarDays();
+        await LoadCalendarDaysAsync();
     }
 
-    private void LoadCalendarDays()
+    /// <summary>
+    /// Generates a 42-day calendar grid based on the current visible month.
+    /// Includes trailing/leading days from adjacent months.
+    /// </summary>
+    private async Task LoadCalendarDaysAsync()
     {
-        calendarDays.Clear();
-        var firstDayOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
-        var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+        _calendarDays.Clear();
+        var firstDayOfMonth = new DateTime(_currentDate.Year, _currentDate.Month, 1);
+        
+        // Find the Sunday of the week containing the 1st of the month
         var startDate = firstDayOfMonth.AddDays(-(int)firstDayOfMonth.DayOfWeek);
         
-        // Fetch all entries (optimized: ideally fetch only for range, but GetEntries gets all for now)
-        var allEntries = Db.GetEntries(); 
+        var allEntries = await Db.GetAllEntriesAsync(); 
 
-        for (int i = 0; i < 42; i++)
+        // Always show 6 weeks (42 days) for a consistent grid
+        for (var i = 0; i < 42; i++)
         {
             var date = startDate.AddDays(i);
             var entry = allEntries.FirstOrDefault(e => e.EntryDate.Date == date.Date);
 
-            calendarDays.Add(new CalendarDay
+            _calendarDays.Add(new CalendarDay
             {
                 Date = date,
-                Day = date.Day,
-                IsCurrentMonth = date.Month == currentDate.Month,
-                IsSelected = selectedDate.HasValue && date.Date == selectedDate.Value.Date,
+                IsCurrentMonth = date.Month == _currentDate.Month,
+                IsSelected = _selectedDate.HasValue && date.Date == _selectedDate.Value.Date,
                 Mood = entry != null ? MapMood(entry.PrimaryMood) : null,
                 EntryId = entry?.Id
             });
         }
     }
 
-    private MoodType? MapMood(string moodName)
+    /// <summary>
+    /// Maps a string mood name to a MoodType category for simplified calendar display.
+    /// </summary>
+    private static MoodType? MapMood(string moodName)
     {
         if (string.IsNullOrEmpty(moodName)) return null;
 
@@ -146,77 +146,58 @@
         if (neutral.Contains(moodName)) return MoodType.Neutral;
         if (negative.Contains(moodName)) return MoodType.Negative;
 
-        return MoodType.Neutral; // Default fallthrough
+        return MoodType.Neutral;
     }
 
-    private List<CalendarDay> GetCalendarDays()
-    {
-        return calendarDays;
-    }
-
-
-
+    // --- Styling Helpers ---
     private string GetDayStyle(CalendarDay day)
     {
         var baseStyle = "min-height: 120px; border-radius: 12px; cursor: pointer; transition: all 0.2s;";
         
-        if (day.IsSelected)
-        {
-            return baseStyle + " border: 2px solid #fff;";
-        }
-        else if (!day.IsCurrentMonth)
-        {
-            return baseStyle + " border: 1px solid transparent;";
-        }
-        else
-        {
-            return baseStyle + " border: 1px solid #444;";
-        }
+        if (day.IsSelected) return baseStyle + " border: 2px solid #fff;";
+        if (!day.IsCurrentMonth) return baseStyle + " border: 1px solid transparent;";
+        
+        return baseStyle + " border: 1px solid #444;";
     }
 
     private string GetDayTextStyle(CalendarDay day)
     {
-        if (!day.IsCurrentMonth)
-        {
-            return "color: #555; font-weight: 500;";
-        }
-        return "font-weight: 500;";
+        return day.IsCurrentMonth ? "font-weight: 500;" : "color: #555; font-weight: 500;";
     }
 
-    private string GetMoodColor(MoodType mood)
+    private static string GetMoodColor(MoodType mood) => mood switch
     {
-        return mood switch
-        {
-            MoodType.Positive => "#10b981",
-            MoodType.Neutral => "#f59e0b",
-            MoodType.Negative => "#ef4444",
-            _ => "#e5e7eb"
-        };
-    }
+        MoodType.Positive => "#10b981",
+        MoodType.Neutral => "#f59e0b",
+        MoodType.Negative => "#ef4444",
+        _ => "#e5e7eb"
+    };
 
-    private void SelectDay(CalendarDay day)
+    // --- Interaction Handlers ---
+    private void HandleSelectDay(CalendarDay day)
     {
-        selectedDate = day.Date;
-        foreach (var d in calendarDays)
+        _selectedDate = day.Date;
+        foreach (var d in _calendarDays)
         {
-            d.IsSelected = d.Date == selectedDate;
+            d.IsSelected = d.Date == _selectedDate;
         }
 
+        // Navigate to entry if one exists for the selected day
         if (day.EntryId.HasValue)
         {
             Nav.NavigateTo($"/entry/{day.EntryId}");
         }
     }
 
-    private void PreviousMonth()
+    private async Task HandlePreviousMonth()
     {
-        currentDate = currentDate.AddMonths(-1);
-        LoadCalendarDays();
+        _currentDate = _currentDate.AddMonths(-1);
+        await LoadCalendarDaysAsync();
     }
 
-    private void NextMonth()
+    private async Task HandleNextMonth()
     {
-        currentDate = currentDate.AddMonths(1);
-        LoadCalendarDays();
+        _currentDate = _currentDate.AddMonths(1);
+        await LoadCalendarDaysAsync();
     }
 }

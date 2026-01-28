@@ -2,43 +2,42 @@
 using JournalApp.Services;
 using MudBlazor.Services;
 using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Storage;
 using QuestPDF.Infrastructure;
 
-namespace JournalApp
+namespace JournalApp;
+
+public static class MauiProgram
 {
-    public static class MauiProgram
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+            });
 
-            string dbPath = Path.Combine(FileSystem.AppDataDirectory, "journal.db");
-            Console.WriteLine($"Database path: {dbPath}");
+        // Initialize QuestPDF License
+        QuestPDF.Settings.License = LicenseType.Community;
 
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .UseMauiCommunityToolkit()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                });
-
-            // Initialize QuestPDF License
-            QuestPDF.Settings.License = LicenseType.Community;
-
-            builder.Services.AddMauiBlazorWebView();
+        // Add Services
+        builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddMudServices();
+        
+        builder.Services.AddSingleton<DatabaseService>();
+        builder.Services.AddSingleton<ThemeService>();
+        builder.Services.AddSingleton<SecurityService>();
+        builder.Services.AddSingleton<PdfExportService>();
+        builder.Services.AddSingleton(FileSaver.Default);
 
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+        builder.Services.AddBlazorWebViewDeveloperTools();
+        builder.Logging.AddDebug();
 #endif
-            builder.Services.AddSingleton<DatabaseService>();
-            builder.Services.AddSingleton<ThemeService>();
-            builder.Services.AddSingleton<SecurityService>();
-            builder.Services.AddSingleton<PdfExportService>();
-            builder.Services.AddSingleton(CommunityToolkit.Maui.Storage.FileSaver.Default);
-            builder.Services.AddMudServices();
-            return builder.Build();
-        }
+
+        return builder.Build();
     }
 }
